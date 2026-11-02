@@ -113,30 +113,7 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
         {body}
       </div>
 
-      {showItems && billed && isInvoice && (
-        <table className="mt-4 text-[10px]">
-          <thead>
-            <tr className="bg-slate-50 text-left text-[9px] uppercase tracking-[0.08em] text-slate-500">
-              <th className="w-8 border-y border-slate-200 px-2 py-2 font-semibold">#</th>
-              <th className="border-y border-slate-200 px-2 py-2 font-semibold">Description</th>
-              <th className="w-32 border-y border-slate-200 px-2 py-2 text-right font-semibold">Amount to be paid</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item: any, index: any) => (
-              <tr key={index} className="align-top text-slate-600">
-                <td className="border-b border-slate-100 px-2 py-2">{index + 1}</td>
-                <td className="border-b border-slate-100 px-2 py-2 text-slate-800">{item.description || "—"}</td>
-                <td className="border-b border-slate-100 px-2 py-2 text-right font-medium tabular-nums text-slate-900">
-                  {inr(computeTotals([item], 0).subtotal)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {showItems && !(billed && isInvoice) && (
+      {showItems && (
         <table className="mt-4 text-[10px]">
           <thead>
             <tr className="bg-slate-50 text-left text-[9px] uppercase tracking-[0.08em] text-slate-500">
@@ -168,14 +145,14 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
       )}
 
       {showPayment && (
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex flex-col items-end">
           <table className="w-[58%] text-[10px]">
             <tbody>
               {billed ? (
                 isInvoice ? (
                   <>
                     <tr>
-                      <td className="py-1 text-slate-500">Total amount to be paid</td>
+                      <td className="py-1 text-slate-500">Sum of line items</td>
                       <td className="py-1 text-right tabular-nums text-slate-800">{inr(fin.toBePaid)}</td>
                     </tr>
                     <tr>
@@ -265,6 +242,16 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
               )}
             </tbody>
           </table>
+          {billed && isInvoice && (
+            <div className="mt-3 flex w-[58%] items-center justify-between rounded border-2 border-slate-900 px-3 py-2">
+              <span className="font-heading text-[11px] font-bold uppercase tracking-wide text-slate-900">
+                Total amount to be paid
+              </span>
+              <span className="font-heading text-[13px] font-bold tabular-nums text-slate-900">
+                {inr(fin.toBePaid)}
+              </span>
+            </div>
+          )}
         </div>
       )}
 

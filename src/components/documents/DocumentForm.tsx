@@ -277,73 +277,15 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
         />
       </div>
 
-      {billed ? (
-        <div className="rounded-lg border border-border bg-white p-3">
-          <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <p className="text-[12px] font-semibold text-slate-600">
-                Amounts to be paid on this invoice
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Add each amount due now (advance, milestone). Together they make the total to be paid.
-              </p>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={addItem}>
-              <Plus className="mr-1 h-3.5 w-3.5" /> Add amount
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {form.items.map((item: any, index: any) => (
-              <div key={index} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  value={item.description}
-                  onChange={(event) => setItem(index, { description: event.target.value })}
-                  placeholder="e.g. Advance (30%), Milestone 2"
-                  className="h-8 flex-1 text-[12.5px]"
-                />
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.rate}
-                    onChange={(event) =>
-                      setItem(index, { rate: Number(event.target.value), quantity: 1, discount: 0 })
-                    }
-                    placeholder="Amount (₹)"
-                    className="h-8 w-[150px] text-[12.5px]"
-                  />
-                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveItem(index, -1)} title="Move up">
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveItem(index, 1)} title="Move down">
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-rose-500" onClick={() => removeItem(index)} title="Remove">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {form.items.length === 0 && (
-              <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-[12px] text-muted-foreground">
-                No amounts added yet. Add the amount to be paid now.
-              </p>
-            )}
-          </div>
-          {onRecordPayment && (
-            <div className="mt-3 flex justify-end">
-              <Button type="button" variant="outline" size="sm" onClick={onRecordPayment}>
-                <Plus className="mr-1 h-3.5 w-3.5" /> Record payment received
-              </Button>
-            </div>
-          )}
-        </div>
-      ) : (
       <div>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[12px] font-semibold text-slate-600">
             Line items
+            {billed && (
+              <span className="ml-2 font-normal text-muted-foreground">
+                (amounts to be paid now; their total is the amount to pay)
+              </span>
+            )}
             {!paymentVisible && (
               <span className="ml-2 font-normal text-muted-foreground">
                 (saved, but hidden on the paper while the payment section is off)
@@ -469,7 +411,6 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
           )}
         </div>
       </div>
-      )}
 
       <div className="grid gap-3 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
@@ -507,10 +448,13 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
           )}
           {billed ? (
             <dl className="mt-3 space-y-1.5 text-[12.5px]">
-              <Row label="Total amount to be paid" value={inr(fin?.toBePaid)} />
+              <Row label="Sum of line items" value={inr(fin?.toBePaid)} />
               <Row label="Total amount (actual price)" value={inr(fin?.total)} />
               <div className="border-t border-border pt-1.5">
                 <Row label="Amount left to pay" value={inr(fin?.balance)} strong />
+              </div>
+              <div className="mt-2 rounded-md border-2 border-slate-800 bg-white px-2.5 py-2">
+                <Row label="TOTAL AMOUNT TO BE PAID" value={inr(fin?.toBePaid)} strong />
               </div>
               <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
                 The actual price comes from the project. Payments received are listed under Payments.
