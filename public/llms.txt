@@ -1,0 +1,47 @@
+# WorkManager
+
+> WorkManager is a business workspace for small companies, agencies and service teams. It keeps clients, projects, tasks, documents, payments, expenses, team access and reports in one place. Each installation serves one company. The first person to register creates the company and becomes its admin. Sign-in uses Google, followed by a passcode check.
+
+WorkManager is sold and installed per company. Each company's data is stored in its own database, not shared with other companies.
+
+## What it does
+
+- Clients: a client record with a unique client code (for example CL-0001), used across projects, tasks, payments, expenses and documents.
+- Projects: track each project's client, status, deadlines and progress.
+- Tasks and calendar: assign tasks to team members, set due dates and view them on a calendar.
+- Documents: create quotations and invoices with automatic numbering (for example INV-2026-0001) and download them.
+- Payments: record money received against invoices and see outstanding balances.
+- Expenses: log spending with receipts and categories.
+- Reports and analytics: revenue, collections, spending and profit over time, by client and by project.
+- Team: admins approve new members and set their roles. Members see only what their role allows.
+- Notifications and activity log: a record of who changed what, and reminders for upcoming deadlines.
+- Settings: company details, default tax rate, invoice numbering and branding. The company name is set at registration and is read-only.
+- Manager assistant (optional): an AI assistant that answers questions about the company's own data. It is available only when the installation has a Gemini key configured.
+- Installable app: can be added to a phone or desktop home screen and keeps its interface available offline.
+
+## Security
+
+- Google sign-in, with access limited to approved accounts.
+- A passcode is required for each sign-in session. Sessions last 12 hours. The passcode locks for 15 minutes after five wrong attempts.
+- Row-level security in the database limits every query to the signed-in user's own company.
+- The admin approves each new team member before they can open the workspace.
+
+## Pages
+
+- [Home](/): overview of the product and how to get started.
+- [Register](/register): create a new company, or request access to an existing one.
+- [Sign in](/login): sign in with Google to an existing workspace.
+- [Security overview](/security): how data is stored and protected.
+- [Privacy policy](/privacy): what personal data is used and why.
+- [Terms of use](/terms): the terms that apply to using WorkManager.
+- [Developer and company details](/developer): who builds WorkManager, contact details and business registration.
+
+## Who it is for
+
+- Digital, creative and marketing agencies
+- Freelancers and consultancies with several clients
+- Small service businesses that currently track work and money in spreadsheets or messaging apps
+
+## Contact
+
+For a demo, pricing or to set up WorkManager for your company, see [Developer and company details](/developer), which lists the business email and registration details.
