@@ -120,7 +120,7 @@ export default function PaymentDialog({
       document_id: documentId,
       client_id: doc?.client_id || prev.client_id,
       project_id: doc?.project_id || prev.project_id,
-      amount: fin ? String(fin.balance) : prev.amount,
+      amount: fin ? String(fin.dueNow) : prev.amount,
     }));
   };
 
@@ -140,11 +140,11 @@ export default function PaymentDialog({
     }
     // Overpayment guard: a received payment against an invoice may not exceed what is still owed.
     if (form.status === "received" && selectedInvoice?.doc_type === "invoice" && selectedFin) {
-      if (Number(form.amount) > selectedFin.balance + 0.004) {
+      if (Number(form.amount) > selectedFin.dueNow + 0.004) {
         setError(
-          selectedFin.balance <= 0
+          selectedFin.dueNow <= 0
             ? `${selectedInvoice.doc_number} is already fully paid. Record an adjustment or refund instead.`
-            : `This would take ${selectedInvoice.doc_number} above its balance. Balance left to pay is ${inr(selectedFin.balance)}.`,
+            : `This would take ${selectedInvoice.doc_number} above what is still to collect on it. Still to collect: ${inr(selectedFin.dueNow)}.`,
         );
         return;
       }
@@ -235,7 +235,7 @@ export default function PaymentDialog({
               onChange={chooseInvoice}
               options={invoiceOptions.map((d: any) => ({
                 value: d.id,
-                label: `${d.doc_number} · balance ${inr(figuresFor(d)?.balance ?? d.balance_due ?? d.total)}`,
+                label: `${d.doc_number} · still to collect ${inr(figuresFor(d)?.dueNow ?? d.balance_due ?? d.total)}`,
               }))}
               placeholder="Unlinked payment"
               className="sm:col-span-2"
@@ -287,11 +287,11 @@ export default function PaymentDialog({
           {selectedInvoice && selectedFin && (
             <p className="rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-slate-600">
               {selectedInvoice.doc_number} · total {inr(selectedFin.total)} · already received{" "}
-              {inr(selectedFin.received)} · balance left <strong>{inr(selectedFin.balance)}</strong>
+              {inr(selectedFin.received)} · still to collect here <strong>{inr(selectedFin.dueNow)}</strong>
               {num(form.amount) > 0 && form.status === "received" && (
                 <>
                   {" "}· after this payment{" "}
-                  <strong>{inr(Math.max(0, selectedFin.balance - num(form.amount)))}</strong>
+                  <strong>{inr(Math.max(0, selectedFin.dueNow - num(form.amount)))}</strong>
                 </>
               )}
             </p>
