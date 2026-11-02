@@ -21,6 +21,9 @@ import {
 } from "@/components/common/FormFields";
 import { fetchClients } from "@/lib/clients";
 import { fetchAll } from "@/lib/db";
+import { EMPTY_LEDGER, documentFinancials, isProjectBilled } from "@/lib/doc-finance";
+import { fmtDate } from "@/lib/format";
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
@@ -31,7 +34,7 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-export default function DocumentForm({ form, setForm, settings }: any) {
+export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_LEDGER }: any) {
   const update = (key: any, value: any) => setForm((prev: any) => ({ ...prev, [key]: value }));
   const clientsQuery = useQuery({
     queryKey: ["form-clients"],
@@ -84,6 +87,15 @@ export default function DocumentForm({ form, setForm, settings }: any) {
   const meta = docTypeMeta(form.doc_type);
   const totals = computeTotals(form.items, form.tax_rate);
   const paymentVisible = showsPayment(form);
+  const selectedProject = clientProjects.find((p: any) => p.id === form.project_id);
+  const billed = isProjectBilled(form, selectedProject);
+  // Live figures from the ledger: the same numbers the printed paper shows.
+  const fin = documentFinancials(
+    { ...form, total: billed ? form.total : totals.total },
+    selectedProject,
+    ledger,
+  );
+  const billedRows = (fin?.rows || []).filter((p: any) => ["received", "refunded"].includes(p.status));
 
   // Changing the type swaps in that type's template unless the wording was edited by hand.
   const changeType = (value: any) =>
@@ -268,6 +280,38 @@ export default function DocumentForm({ form, setForm, settings }: any) {
         />
       </div>
 
+      {billed ? (
+        <div className="rounded-lg border border-border bg-white p-3">
+          <p className="mb-2 text-[12px] font-semibold text-slate-600">
+            Payments received for {selectedProject?.title}
+          </p>
+          {billedRows.length === 0 ? (
+            <p className="text-[12px] text-muted-foreground">
+              No payments yet. Record them from the Record payment button and they appear here and on the invoice automatically.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border/70 text-[12px]">
+              {billedRows.map((payment: any) => (
+                <li key={payment.id} className="flex items-center justify-between gap-2 py-1.5">
+                  <span>
+                    {fmtDate(payment.payment_date)} · {payment.payment_code}
+                    {" · "}
+                    {PAYMENT_METHOD_LABELS[payment.method] || payment.method}
+                    {payment.status === "refunded" ? " (refund)" : ""}
+                  </span>
+                  <span className="tabular-nums font-medium">
+                    {payment.status === "refunded" ? "−" : ""}
+                    {inr(payment.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 border-t border-border pt-2 text-right text-[12.5px] font-semibold tabular-nums">
+            Total received {inr(fin?.received)}
+          </p>
+        </div>
+      ) : (
       <div>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[12px] font-semibold text-slate-600">
@@ -397,6 +441,7 @@ export default function DocumentForm({ form, setForm, settings }: any) {
           )}
         </div>
       </div>
+      )}
 
       <div className="grid gap-3 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
@@ -424,31 +469,38 @@ export default function DocumentForm({ form, setForm, settings }: any) {
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Summary
           </p>
-          <TextField
-            label="Tax rate (%)"
-            type="number"
-            value={form.tax_rate}
-            onChange={(value: any) => update("tax_rate", Number(value))}
-          />
-          <dl className="mt-3 space-y-1.5 text-[12.5px]">
-            <Row label="Subtotal" value={inr(totals.subtotal)} />
-            <Row label="Discounts" value={inr(totals.discount_total)} />
-            <Row
-              label={`Tax (${form.tax_rate || 0}%)`}
-              value={inr(totals.tax_amount)}
+          {!billed && (
+            <TextField
+              label="Tax rate (%)"
+              type="number"
+              value={form.tax_rate}
+              onChange={(value: any) => update("tax_rate", Number(value))}
             />
-            <div className="border-t border-border pt-1.5">
-              <Row label="Total" value={inr(totals.total)} strong />
-            </div>
-            <Row label="Amount received" value={inr(form.amount_paid)} />
-            <Row
-              label="Balance due"
-              value={inr(
-                Math.max(0, totals.total - Number(form.amount_paid || 0)),
-              )}
-              strong
-            />
-          </dl>
+          )}
+          {billed ? (
+            <dl className="mt-3 space-y-1.5 text-[12.5px]">
+              <Row label="Project agreed value" value={inr(fin?.total)} strong />
+              <Row label="Amount received" value={inr(fin?.received)} />
+              <Row label="Balance left to pay" value={inr(fin?.balance)} strong />
+              <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
+                Filled in from the project. Payments are recorded under Payments and listed on the invoice.
+              </p>
+            </dl>
+          ) : (
+            <dl className="mt-3 space-y-1.5 text-[12.5px]">
+              <Row label="Subtotal" value={inr(totals.subtotal)} />
+              <Row label="Discounts" value={inr(totals.discount_total)} />
+              <Row
+                label={`Tax (${form.tax_rate || 0}%)`}
+                value={inr(totals.tax_amount)}
+              />
+              <div className="border-t border-border pt-1.5">
+                <Row label="Total" value={inr(totals.total)} strong />
+              </div>
+              <Row label="Amount received" value={inr(fin?.received)} />
+              <Row label="Balance due" value={inr(fin?.balance)} strong />
+            </dl>
+          )}
           {!settings.signature_uri && (
             <p className="mt-3 rounded-lg border border-dashed border-border px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
               Add a signature in Settings to print it above the signatory line.
