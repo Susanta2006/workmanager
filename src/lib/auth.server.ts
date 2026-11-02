@@ -36,6 +36,7 @@ type FailureReason =
   | "token-missing-auth-time"
   | "profile-query-failed"
   | "profile-missing"
+  | "profile-provision-failed"
   | "google-account-unconfirmed"
   | "account-not-approved"
   | "team-inactive"
@@ -88,13 +89,36 @@ export async function verifyRequestIdentity(request: Request): Promise<SessionId
   const authTime = claims.auth_time ?? (Math.max(0, ...amrTimes) || claims.iat);
   if (!authTime) return fail("token-missing-auth-time");
 
-  const { data: profile, error: profileError } = await getServiceSupabase()
-    .from("profiles")
-    .select("organization_id, role, account_status, team_status, full_name")
-    .eq("id", data.user.id)
-    .maybeSingle();
+  const profileQuery = () =>
+    getServiceSupabase()
+      .from("profiles")
+      .select("organization_id, role, account_status, team_status, full_name")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+  let { data: profile, error: profileError } = await profileQuery();
   if (profileError) return fail("profile-query-failed", profileError.message);
-  if (!profile) return fail("profile-missing");
+
+  // An account can exist without a profile when it was created before the profile trigger
+  // was installed. Create the pending profile here, so every installation self-heals.
+  if (!profile) {
+    const { error: provisionError } = await getServiceSupabase()
+      .from("profiles")
+      .upsert(
+        {
+          id: data.user.id,
+          email: data.user.email ?? "",
+          full_name: String(data.user.user_metadata?.full_name ?? data.user.user_metadata?.name ?? ""),
+          role: "member",
+          account_status: "pending",
+        },
+        { onConflict: "id", ignoreDuplicates: true },
+      );
+    if (provisionError) return fail("profile-provision-failed", provisionError.message);
+    ({ data: profile, error: profileError } = await profileQuery());
+    if (profileError) return fail("profile-query-failed", profileError.message);
+    if (!profile) return fail("profile-missing");
+  }
 
   const providers: string[] = data.user.app_metadata?.providers || [];
   const isGoogleUser =
