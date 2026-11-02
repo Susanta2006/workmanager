@@ -143,9 +143,12 @@ function TeamPage() {
 
   const approve = async (member: any) => {
     try {
+      // Approval only admits the person as a Member. Admin is granted separately from the
+      // role editor, so a requested Admin role can never be approved by accident.
       await backend.entities.User.update(member.id, {
         account_status: "approved",
         team_status: "active",
+        role: "member",
       });
       await logActivity({
         user,
