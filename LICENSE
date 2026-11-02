@@ -1,0 +1,109 @@
+WORKMANAGER END-USER LICENSE AGREEMENT
+
+This License Agreement ("Agreement") is between Shristi AI Web Creations ("Licensor", "we") and the company or individual that obtains a licence to use WorkManager ("Licensee", "you").
+
+By installing, accessing or using WorkManager, you agree to this Agreement. If you do not agree, do not install or use the software.
+
+1. DEFINITIONS
+
+"Software" means the WorkManager application, including its source code, documentation, database schema, and any updates Licensor provides.
+
+"Installation" means one deployment of the Software that serves one company, using the database and hosting accounts that Licensee controls.
+
+"Authorised User" means an employee, contractor or team member of Licensee who signs in to an Installation under Licensee's control.
+
+"Licensee Data" means all information Licensee and its Authorised Users enter into, store in, or generate with the Software, including clients, projects, tasks, documents, payments, expenses and files.
+
+2. GRANT OF LICENCE
+
+Subject to this Agreement and payment of applicable fees, Licensor grants Licensee a non-exclusive, non-transferable, revocable licence to:
+
+(a) install and run one Installation of the Software for Licensee's own internal business use; and
+
+(b) allow Authorised Users to use that Installation for that purpose.
+
+The licence covers the number of Installations and Authorised Users stated in the order form or invoice. Additional Installations or users require an additional licence.
+
+3. OWNERSHIP
+
+The Software, including all copies, modifications, derivative works and documentation, is owned by Licensor and is protected by copyright and other intellectual property laws. Except for the licence in section 2, no rights are granted.
+
+Licensee Data is owned by Licensee. Licensor does not claim ownership of Licensee Data and will not use it except as needed to provide support that Licensee requests, or as required by law.
+
+4. RESTRICTIONS
+
+Licensee shall not, and shall not permit anyone else to:
+
+(a) sell, rent, lease, sublicense, distribute, host for third parties, or otherwise make the Software available to anyone other than its Authorised Users;
+
+(b) copy, modify, translate, or create derivative works of the Software, except as needed to configure it for Licensee's own Installation;
+
+(c) reverse engineer, decompile or disassemble the Software, except where applicable law expressly permits this despite this restriction;
+
+(d) remove or alter any copyright, trademark or proprietary notice;
+
+(e) use the Software to build a competing product or service that is offered to third parties;
+
+(f) run the Software in a way that violates applicable law or the terms of the third-party services it relies on.
+
+5. THIRD-PARTY SERVICES
+
+The Software relies on third-party services, including Supabase (database, storage and authentication), Google (sign-in), hosting providers such as Vercel, and optionally Google Gemini (AI assistant). Licensee is responsible for its own accounts with those providers and for complying with their terms. Licensor is not responsible for the availability, pricing, data handling or changes of those services.
+
+6. SUPPORT AND UPDATES
+
+Licensor will provide the support and updates described in the order form or invoice for the period paid. Unless stated otherwise, support covers defects in the Software as delivered, not customisations, third-party outages, or problems caused by Licensee's configuration, data or misuse.
+
+7. FEES AND PAYMENT
+
+Licensee will pay the fees stated in the order form or invoice, within the period stated there. Late payment may result in suspension of support. Fees are exclusive of taxes, which Licensee will pay where required by law.
+
+8. TERM AND TERMINATION
+
+This Agreement starts when Licensee first installs or uses the Software and continues until terminated. Licensee may stop using the Software at any time.
+
+Licensor may terminate the licence by written notice if Licensee materially breaches this Agreement and does not correct the breach within 30 days of notice.
+
+On termination, Licensee must stop using the Software and delete all copies in its control. Licensee Data remains Licensee's property, and Licensee may export it before termination takes effect.
+
+9. WARRANTY DISCLAIMER
+
+The Software is provided "as is" and "as available". To the maximum extent permitted by law, Licensor disclaims all warranties, express or implied, including warranties of merchantability, fitness for a particular purpose, and non-infringement. Licensor does not warrant that the Software will be uninterrupted or error-free.
+
+10. LIMITATION OF LIABILITY
+
+To the maximum extent permitted by law, Licensor will not be liable for any indirect, incidental, special, consequential or punitive damages, or for loss of profits, revenue, data or goodwill, arising from the use of or inability to use the Software.
+
+Licensor's total liability under or related to this Agreement will not exceed the total fees Licensee paid for the licence in the twelve months before the event giving rise to the claim.
+
+Nothing in this Agreement limits liability that cannot be limited under applicable law.
+
+11. BACKUPS AND DATA RESPONSIBILITY
+
+Licensee is responsible for keeping its own backups of Licensee Data, for the security of its accounts and passcodes, and for the accuracy of the information it enters. Licensee should review its database backup settings with its hosting provider.
+
+12. CONFIDENTIALITY
+
+Each party will keep confidential the non-public information it receives from the other under this Agreement, and will use it only for the purposes of this Agreement. This does not apply to information that is public, already known to the receiving party, or required to be disclosed by law.
+
+13. GOVERNING LAW AND DISPUTES
+
+This Agreement is governed by the laws of India. The courts at [city, state] have exclusive jurisdiction over disputes arising from it. Before starting court proceedings, the parties will try to resolve the dispute by good-faith discussion for 30 days.
+
+14. GENERAL
+
+This Agreement, together with the order form or invoice, is the entire agreement between the parties about the Software. It replaces earlier discussions on the same subject. Changes must be in writing and signed or accepted by both parties.
+
+If any provision is found unenforceable, the rest of the Agreement remains in effect.
+
+Licensee may not assign this Agreement without Licensor's written consent. Licensor may assign it to a successor to the Software business.
+
+Notices may be sent by email to the addresses stated in the order form or invoice.
+
+Licensor's contact details are listed on the Developer page of the Software.
+
+Last updated: [date]
+
+---
+
+DRAFT: This template is provided for convenience and is not legal advice. Have a qualified lawyer review it, complete the bracketed fields, and align the fees, support terms and governing law with your actual sales process before you use it with customers.
