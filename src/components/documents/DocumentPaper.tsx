@@ -13,7 +13,6 @@ export default function DocumentPaper({ doc, client, project, settings }: any) {
   const clientName = client?.name || doc.client_name || "—";
   const projectName = doc.project_name || project?.title || "";
   const body = String(doc.body || "").trim() || templateBodyFor(doc.doc_type);
-  const clientSignerName = client?.contact_person || "";
 
   return (
     <div className="doc-paper mx-auto" data-print-area>
@@ -268,15 +267,15 @@ export default function DocumentPaper({ doc, client, project, settings }: any) {
         </div>
       )}
 
-      <div className="mt-8 border-t border-slate-200 pt-4">
-        <div className="grid grid-cols-2 items-start gap-10">
+      <div className="mt-10">
+        <div className="flex items-end justify-between gap-8">
           {isAgreement ? (
-            <div className="text-[9.5px] text-slate-600">
-              <p className="h-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            <div className="w-[200px] text-[9.5px] text-slate-600">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                 Accepted by client
               </p>
-              <div className="h-[46px] border-b border-slate-400" />
-              <p className="mt-1 h-4">Client signature</p>
+              <div className="flex h-[60px] items-end border-b border-slate-400" />
+              <p className="mt-1">Client signature</p>
             </div>
           ) : (
             <div className="text-[9px] leading-relaxed text-slate-400">
@@ -287,46 +286,18 @@ export default function DocumentPaper({ doc, client, project, settings }: any) {
             </div>
           )}
 
-          <div className="text-[9.5px] text-slate-600">
-            <p className="h-4 text-right text-slate-500">
-              For {settings.company_name}
-            </p>
-            <div className="flex h-[46px] items-end justify-end border-b border-slate-400">
+          <div className="w-[200px] text-right text-[9.5px] text-slate-600">
+            <p className="text-slate-500">For {settings.company_name}</p>
+            <div className="flex h-[60px] items-end justify-end border-b border-slate-400">
               <PrivateImage
                 fileUri={settings.signature_uri}
                 alt="Authorised signature"
-                className="max-h-[44px] w-auto object-contain"
+                className="max-h-[58px] w-auto object-contain"
               />
             </div>
-            <p className="mt-1 h-4 text-right">
-              {settings.signature_name || "Authorised signatory"}
-            </p>
+            <p className="mt-1">{settings.signature_name || "Authorised signatory"}</p>
           </div>
         </div>
-
-        {isAgreement && (
-          <div className="mt-4 grid grid-cols-2 items-end gap-10 text-[9.5px] text-slate-600">
-            <div>
-              <p>
-                Name:{" "}
-                {clientSignerName ? (
-                  <span className="font-medium text-slate-800">{clientSignerName}</span>
-                ) : (
-                  <span className="inline-block w-[150px] border-b border-slate-400 align-bottom" />
-                )}
-              </p>
-              <p className="mt-2">
-                Date: <span className="inline-block w-[150px] border-b border-slate-400 align-bottom" />
-              </p>
-            </div>
-            <div className="text-[9px] leading-relaxed text-slate-400">
-              <p>{settings.default_footer}</p>
-              <p>
-                {doc.doc_number} · {settings.company_name}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
