@@ -15,7 +15,7 @@ export default function LegalPage({ title, updated, children }: any) {
             <Link to="/" className="font-semibold tracking-tight hover:text-primary">
               WorkManager
             </Link>
-          }
+          )}
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-10">
