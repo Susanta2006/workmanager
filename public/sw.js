@@ -16,6 +16,7 @@ const SHELL = [
   "/icon-512-maskable.png",
   "/apple-touch-icon.png",
   "/favicon.ico",
+  "/llms.txt",
 ];
 
 // Always network, never cached, never intercepted.
