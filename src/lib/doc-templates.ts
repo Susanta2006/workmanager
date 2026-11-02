@@ -12,7 +12,7 @@ Acceptance of this quotation may be given in writing (email is sufficient) and i
   },
   invoice: {
     body: `This invoice is raised for the work and deliverables listed below, in accordance with the agreed quotation or scope of work.
-Please quote the invoice number in the payment reference. Amounts already received are shown against the total; the balance remains payable by the due date.
+Please pay the total amount to be paid shown above, and quote the invoice number in the payment reference. Any amount left to pay is due later, as agreed in the project schedule.
 Third-party costs (domain, hosting, paid APIs) are billed at actuals unless they appear as fixed line items.
 Late payment may pause delivery or support until the outstanding balance is settled.`,
   },
