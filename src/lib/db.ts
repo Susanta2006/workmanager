@@ -1,6 +1,7 @@
 import { backend } from "@/api/backend";
 import { getSupabase } from "@/lib/supabase";
-import { round2 } from "@/lib/format";
+import { num } from "@/lib/format";
+import { buildLedger, documentFinancials, resolveStatus } from "@/lib/doc-finance";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 1000;
@@ -157,36 +158,87 @@ export async function countUnreadNotifications() {
   return count ?? 0;
 }
 
-/** Recompute an invoice/receipt's paid amount and status from its payment ledger. */
+/**
+ * Brings every cached document amount back in line with the payment ledger.
+ *
+ * Pass the payment(s) that changed (the saved one, and the previous version if it was
+ * moved or edited). Every document they touch is refreshed, and so is every invoice and
+ * receipt of the same project, because project-billed invoices share one received total.
+ * Figures come from documentFinancials, the same code the printed paper uses.
+ */
+export async function syncPaymentBalances(...changed: any[]) {
+  return refreshBalances(changed.filter(Boolean), false);
+}
+
+/**
+ * Checks every document's cached figures against the ledger and fixes any that differ.
+ * Runs when the documents list opens, so invoices created before cached figures were kept
+ * in step are corrected. Only rows that differ are written. Returns how many were changed.
+ */
+export async function syncAllBalances() {
+  return refreshBalances([], true);
+}
+
+async function refreshBalances(records: any[], all: boolean) {
+  const [payments, documents, projects] = await Promise.all([
+    fetchAll("Payment", null),
+    fetchAll("Document", null),
+    fetchAll("Project", null),
+  ]);
+  const ledger = buildLedger(payments, documents);
+  const projectsById: Record<string, any> = Object.fromEntries(
+    projects.map((project: any) => [project.id, project]),
+  );
+
+  const documentIds = new Set<string>();
+  const projectIds = new Set<string>();
+  for (const record of records) {
+    if (record.document_id) documentIds.add(record.document_id);
+    if (record.project_id) projectIds.add(record.project_id);
+  }
+  documentIds.forEach((id) => {
+    const projectId = ledger.docsById[id]?.project_id;
+    if (projectId) projectIds.add(projectId);
+  });
+
+  let changedCount = 0;
+  for (const doc of documents) {
+    const projectBilledSibling =
+      ["invoice", "receipt"].includes(doc.doc_type) && projectIds.has(doc.project_id);
+    if (!all && !documentIds.has(doc.id) && !projectBilledSibling) continue;
+
+    const fin = documentFinancials(doc, projectsById[doc.project_id], ledger);
+    if (!fin) continue;
+
+    let patch: Record<string, any>;
+    if (doc.doc_type === "receipt") {
+      // A receipt is a fixed record of one payment. Only its balance is kept current, and only for project receipts.
+      if (!fin.billed) continue;
+      patch = { balance_due: fin.balance };
+    } else {
+      patch = {
+        amount_paid: fin.received,
+        balance_due: fin.balance,
+        status: resolveStatus(doc, fin),
+      };
+      if (fin.billed) patch.total = fin.total;
+    }
+
+    const differs = Object.entries(patch).some(([key, value]) =>
+      typeof value === "number"
+        ? Math.abs(num(doc[key]) - value) > 0.004
+        : doc[key] !== value,
+    );
+    if (differs) {
+      await backend.entities.Document.update(doc.id, patch);
+      changedCount += 1;
+    }
+  }
+  return changedCount;
+}
+
+/** Kept for existing callers: refreshes one document and its project's billed documents. */
 export async function recalcDocumentPayments(documentId: any) {
   if (!documentId) return null;
-  const doc = await backend.entities.Document.get(documentId);
-  const payments = await fetchAll("Payment", { document_id: documentId });
-  const paid = payments.reduce((sum: any, p: any) => {
-    if (p.status === "received") return sum + Number(p.amount || 0);
-    if (p.status === "refunded") return sum - Number(p.amount || 0);
-    return sum;
-  }, 0);
-  const amountPaid = round2(paid);
-  const total = Number(doc.total || 0);
-  const balance = round2(total - amountPaid);
-  let status = doc.status;
-  if (doc.status === "cancelled") {
-    status = "cancelled";
-  } else if (total > 0 && balance <= 0.009) {
-    status = "paid";
-  } else if (amountPaid > 0) {
-    status = "partially_paid";
-  } else if (doc.status === "draft") {
-    status = "draft";
-  } else if (doc.due_date && new Date(doc.due_date) < new Date(new Date().toDateString())) {
-    status = "overdue";
-  } else {
-    status = doc.status === "accepted" ? "accepted" : "sent";
-  }
-  return backend.entities.Document.update(documentId, {
-    amount_paid: amountPaid,
-    balance_due: balance < 0 ? 0 : balance,
-    status,
-  });
+  return syncPaymentBalances({ document_id: documentId });
 }
