@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function LegalPage({ title, updated, children }: any) {
@@ -8,16 +7,12 @@ export default function LegalPage({ title, updated, children }: any) {
     <div className="min-h-[60vh] bg-background text-foreground">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Home
+          <Link to="/" className="font-semibold tracking-tight hover:text-primary">
+            WorkManager
           </Link>
           {user ? (
             <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
               Dashboard
-            </Link>
-          ) : (
-            <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground">
-              Sign in
             </Link>
           )}
         </div>
