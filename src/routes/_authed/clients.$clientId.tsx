@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { balanceOf } from "@/lib/doc-finance";
 
 export const Route = createFileRoute("/_authed/clients/$clientId")({
   head: () => ({ meta: [{ title: "Client · WorkManager" }] }),
@@ -73,7 +74,7 @@ function ClientDetailPage() {
       ),
       outstanding: invoices.reduce(
         (sum: any, d: any) =>
-          sum + num(d.balance_due || num(d.total) - num(d.amount_paid)),
+          sum + balanceOf(d),
         0,
       ),
     };

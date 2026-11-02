@@ -45,6 +45,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { fetchClients } from "@/lib/clients";
 import type { ClientRow } from "@/lib/clients";
+import { balanceOf } from "@/lib/doc-finance";
 
 export const Route = createFileRoute("/_authed/clients/")({
   head: () => ({ meta: [{ title: "Clients · WorkManager" }] }),
@@ -122,7 +123,7 @@ function ClientsPage() {
         projects: clientProjects.length,
         outstanding: clientDocs.reduce(
           (sum: any, d: any) =>
-            sum + num(d.balance_due || num(d.total) - num(d.amount_paid)),
+            sum + balanceOf(d),
           0,
         ),
         received,

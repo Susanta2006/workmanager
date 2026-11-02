@@ -1,9 +1,9 @@
 import ClientRef from "@/components/common/ClientRef";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileText, Plus, Search } from "lucide-react";
-import { fetchAll } from "@/lib/db";
+import { fetchAll, syncAllBalances } from "@/lib/db";
 import { useOrgSettings } from "@/lib/org-settings";
 import { DOC_TYPES, DOC_STATUS, docTypeLabel } from "@/lib/doc-types";
 import { downloadCsv, fmtDate, inr, num, toCsv } from "@/lib/format";
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchClients } from "@/lib/clients";
+import { balanceOf } from "@/lib/doc-finance";
 
 export const Route = createFileRoute("/_authed/documents/")({
   head: () => ({ meta: [{ title: "Documents · WorkManager" }] }),
@@ -53,6 +54,19 @@ function DocumentsPage() {
       return { documents, clients };
     },
   });
+
+  const queryClient = useQueryClient();
+  const [checked, setChecked] = useState(false);
+  // One-time check per visit: fixes any cached balance that no longer matches the payment ledger.
+  useEffect(() => {
+    if (!data || checked) return;
+    setChecked(true);
+    syncAllBalances()
+      .then((changed) => {
+        if (changed > 0) queryClient.invalidateQueries({ queryKey: ["documents-page"] });
+      })
+      .catch(() => undefined);
+  }, [data, checked, queryClient]);
 
   const rows = useMemo(() => {
     const clientsById = Object.fromEntries(
@@ -84,7 +98,7 @@ function DocumentsPage() {
       received: invoices.reduce((sum: any, d: any) => sum + num(d.amount_paid), 0),
       outstanding: invoices.reduce(
         (sum: any, d: any) =>
-          sum + num(d.balance_due || num(d.total) - num(d.amount_paid)),
+          sum + balanceOf(d),
         0,
       ),
     };

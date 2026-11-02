@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Pencil, Plus, Search, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { backend } from "@/api/backend";
-import { fetchAll, logActivity, recalcDocumentPayments } from "@/lib/db";
+import { fetchAll, logActivity, syncPaymentBalances } from "@/lib/db";
 import { useAuth } from "@/lib/AuthContext";
 import { usePermissions } from "@/lib/permissions";
 import {
@@ -85,13 +85,17 @@ function PaymentsPage() {
     const docsById = Object.fromEntries(
       (data?.documents || []).map((d: any) => [d.id, d]),
     );
+    const projectsById = Object.fromEntries(
+      (data?.projects || []).map((p: any) => [p.id, p]),
+    );
     return (data?.payments || [])
       .filter((payment: any) => {
         if (method !== "all" && payment.method !== method) return false;
         if (status !== "all" && payment.status !== status) return false;
         if (search) {
+          const projectTitle = projectsById[payment.project_id || docsById[payment.document_id]?.project_id]?.title || "";
           const haystack =
-            `${payment.payment_code} ${payment.reference} ${payment.notes} ${clientsById[payment.client_id]?.name || ""}`.toLowerCase();
+            `${payment.payment_code} ${payment.reference} ${payment.notes} ${clientsById[payment.client_id]?.name || ""} ${projectTitle}`.toLowerCase();
           if (!haystack.includes(search.toLowerCase())) return false;
         }
         return true;
@@ -101,11 +105,16 @@ function PaymentsPage() {
           String(a.payment_date || ""),
         ),
       )
-      .map((payment: any) => ({
-        payment,
-        client: clientsById[payment.client_id],
-        doc: docsById[payment.document_id],
-      }));
+      .map((payment: any) => {
+        const doc = docsById[payment.document_id];
+        const projectId = payment.project_id || doc?.project_id || "";
+        return {
+          payment,
+          client: clientsById[payment.client_id],
+          doc,
+          project: projectsById[projectId],
+        };
+      });
   }, [data, search, method, status]);
 
   const totals = useMemo(() => {
@@ -134,6 +143,7 @@ function PaymentsPage() {
       { label: "Client", value: (r: any) => r.client?.name || "" },
       { label: "Client ID", value: (r: any) => r.client?.client_code || "" },
       { label: "Invoice", value: (r: any) => r.doc?.doc_number || "" },
+      { label: "Project", value: (r: any) => r.project?.title || "" },
       { label: "Date", value: (r: any) => fmtDate(r.payment.payment_date) },
       { label: "Amount (₹)", value: (r: any) => num(r.payment.amount).toFixed(2) },
       {
@@ -152,15 +162,15 @@ function PaymentsPage() {
     setBusy(true);
     try {
       await backend.entities.Payment.delete(deleting.id);
-      if (deleting.document_id)
-        await recalcDocumentPayments(deleting.document_id);
+      // Refreshes the removed entry's document and every invoice and receipt in its project.
+      await syncPaymentBalances(deleting);
       await logActivity({
         user,
         action: "Payment entry removed",
         entityType: "Payment",
         entityId: deleting.id,
         label: `${deleting.payment_code} · ${inr(deleting.amount)}`,
-        details: deleting.document_id ? "Invoice balance recalculated" : "",
+        details: deleting.document_id || deleting.project_id ? "Balances recalculated" : "",
       });
       toast.success("Payment entry removed and balances recalculated");
       setDeleting(null);
@@ -298,7 +308,7 @@ function PaymentsPage() {
                     Client
                   </TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Against
+                    Against / project
                   </TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     Method
@@ -313,7 +323,7 @@ function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map(({ payment, client, doc }: any) => (
+                {rows.map(({ payment, client, doc, project }: any) => (
                   <TableRow key={payment.id} className="hover:bg-slate-50/60">
                     <TableCell>
                       <p className="text-[12.5px] font-semibold">
@@ -348,6 +358,11 @@ function PaymentsPage() {
                       ) : (
                         <span className="text-muted-foreground">Unlinked</span>
                       )}
+                      {project ? (
+                        <span className="block text-[10.5px] text-muted-foreground">
+                          {project.title}
+                        </span>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-[12px] text-muted-foreground">
                       {PAYMENT_METHOD_LABELS[payment.method] || payment.method}

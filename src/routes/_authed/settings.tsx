@@ -316,6 +316,32 @@ function SettingsPage() {
                 onChange={set("payment_instructions")}
                 rows={3}
                 className="sm:col-span-2"
+                hint="Pre-filled on every new document. Edit it per document if needed."
+              />
+            </div>
+          </div>
+
+          <div className="surface space-y-4 p-4">
+            <div>
+              <p className="font-heading text-[14px] font-semibold">Document defaults</p>
+              <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                These are filled in automatically on every new quotation, invoice, receipt and agreement. Changing them here does not change documents already created.
+              </p>
+            </div>
+            <div className="grid gap-3">
+              <TextAreaField
+                label="Terms & conditions"
+                value={form.default_terms}
+                onChange={set("default_terms")}
+                rows={6}
+                hint="Printed under 'Terms & conditions' on the document."
+              />
+              <TextAreaField
+                label="Notes"
+                value={form.default_notes}
+                onChange={set("default_notes")}
+                rows={3}
+                hint="Printed in the notes box on the document, for example a payment-terms or thank-you line."
               />
             </div>
           </div>

@@ -9,6 +9,7 @@ import { fetchAll, logActivity, pushNotification } from "@/lib/db";
 import { useAuth } from "@/lib/AuthContext";
 import { useOrgSettings } from "@/lib/org-settings";
 import { computeTotals, docTypeMeta, emptyItem } from "@/lib/doc-types";
+import { buildLedger, documentFinancials, resolveStatus } from "@/lib/doc-finance";
 import { templateBodyFor } from "@/lib/doc-templates";
 import { inr } from "@/lib/format";
 import PageHeader from "@/components/common/PageHeader";
@@ -29,28 +30,44 @@ export const Route = createFileRoute("/_authed/documents/new")({
 
 function NewDocumentPage() {
   const search = Route.useSearch();
-  const navigate = useNavigate();
-  const { user } = useAuth();
   const { settings, isLoading: settingsLoading } = useOrgSettings();
-  const createDoc = useServerFn(createDocument);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["document-editor-data"],
     queryFn: async () => {
-      const [clients, projects] = await Promise.all([
+      const [clients, projects, payments, documents] = await Promise.all([
         fetchClients(),
         fetchAll("Project", null),
+        fetchAll("Payment", null),
+        fetchAll("Document", null),
       ]);
-      return { clients, projects };
+      return { clients, projects, payments, documents };
     },
   });
 
-  const client = (data?.clients || []).find((c: any) => c.id === search.client);
-  const project = (data?.projects || []).find((p: any) => p.id === search.project);
+  // The editor mounts only once settings and records have loaded, so its starting values
+  // (terms, notes, payment instructions, tax) come from the saved company defaults.
+  if (isLoading || settingsLoading || !data) return <Skeleton className="h-[600px] rounded-xl" />;
+  return (
+    <NewDocumentEditor
+      search={search}
+      settings={settings}
+      data={data}
+    />
+  );
+}
 
-  const [form, setForm] = useState(() => ({
+function NewDocumentEditor({ search, settings, data }: any) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const createDoc = useServerFn(createDocument);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const client = data.clients.find((c: any) => c.id === search.client);
+  const project = data.projects.find((p: any) => p.id === search.project);
+
+  const [form, setForm] = useState<any>(() => ({
     doc_type: "quotation",
     doc_number: "",
     title: "",
@@ -71,10 +88,14 @@ function NewDocumentPage() {
     body: templateBodyFor("quotation"),
   }));
 
-  const totals = useMemo(
-    () => computeTotals(form.items, form.tax_rate),
-    [form.items, form.tax_rate],
+  const ledger = useMemo(
+    () => buildLedger(data.payments, data.documents),
+    [data.payments, data.documents],
   );
+  const selectedProject = data.projects.find((p: any) => p.id === form.project_id);
+  const totals = useMemo(() => computeTotals(form.items, form.tax_rate), [form.items, form.tax_rate]);
+  // The figures the saved document will carry. Project-billed invoices take the project's agreed value.
+  const fin = documentFinancials({ ...form, total: totals.total }, selectedProject, ledger);
 
   const save = async () => {
     if (!form.client_id) {
@@ -84,14 +105,18 @@ function NewDocumentPage() {
     setSaving(true);
     setError("");
     try {
+      const clientName = data.clients.find((c: any) => c.id === form.client_id)?.name || form.client_name;
       const payload = {
         ...form,
-        client_name: (data?.clients || []).find((c: any) => c.id === form.client_id)?.name || form.client_name,
+        client_name: clientName,
+        project_name: selectedProject?.title || form.project_name,
         title: form.title || docTypeMeta(form.doc_type).label,
         tax_rate: Number(form.tax_rate || 0),
         ...totals,
-        amount_paid: Number(form.amount_paid || 0),
-        balance_due: Math.max(0, totals.total - Number(form.amount_paid || 0)),
+        total: fin.total,
+        amount_paid: fin.received,
+        balance_due: fin.balance,
+        status: resolveStatus({ ...form }, fin),
         currency: "INR",
       };
       delete (payload as any).doc_number;
@@ -112,10 +137,7 @@ function NewDocumentPage() {
         relatedRecordId: created.id,
       });
       toast.success(`Document ${created.doc_number} created`);
-      navigate({
-        to: "/documents/$documentId",
-        params: { documentId: created.id },
-      });
+      navigate({ to: "/documents/$documentId", params: { documentId: created.id } });
     } catch (err: any) {
       setError(err?.message || "Could not save this document.");
     } finally {
@@ -123,8 +145,13 @@ function NewDocumentPage() {
     }
   };
 
-  if (isLoading || settingsLoading)
-    return <Skeleton className="h-[600px] rounded-xl" />;
+  const previewDoc = {
+    ...form,
+    ...totals,
+    total: fin.total,
+    amount_paid: fin.received,
+    balance_due: fin.balance,
+  };
 
   return (
     <div>
@@ -143,8 +170,7 @@ function NewDocumentPage() {
           <Link to="/documents">Cancel</Link>
         </Button>
         <Button size="sm" onClick={save} disabled={saving}>
-          <Save className="mr-1.5 h-3.5 w-3.5" />{" "}
-          {saving ? "Saving…" : "Save document"}
+          <Save className="mr-1.5 h-3.5 w-3.5" /> {saving ? "Saving…" : "Save document"}
         </Button>
       </PageHeader>
 
@@ -155,7 +181,7 @@ function NewDocumentPage() {
       )}
 
       <div className="surface p-4">
-        <DocumentForm form={form} setForm={setForm} settings={settings} />
+        <DocumentForm form={form} setForm={setForm} settings={settings} ledger={ledger} />
       </div>
 
       <div className="mt-4">
@@ -164,17 +190,11 @@ function NewDocumentPage() {
         </p>
         <div className="overflow-x-auto rounded-xl bg-slate-100 p-3">
           <DocumentPaper
-            doc={{
-              ...form,
-              ...totals,
-              balance_due: Math.max(
-                0,
-                totals.total - Number(form.amount_paid || 0),
-              ),
-            }}
-            client={client}
-            project={project}
+            doc={previewDoc}
+            client={client || data.clients.find((c: any) => c.id === form.client_id)}
+            project={selectedProject}
             settings={settings}
+            ledger={ledger}
           />
         </div>
       </div>
