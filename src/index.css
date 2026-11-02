@@ -198,14 +198,23 @@
 
 @media print {
   @page {
-    size: A4;
-    margin: 10mm;
+    size: A4 portrait;
+    margin: 12mm 12mm 14mm 12mm;
   }
 
   html,
   body {
     background: #ffffff !important;
     background-image: none !important;
+    width: 186mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Keep the colours and the signature image exactly as on screen. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   [data-no-print] {
@@ -218,6 +227,7 @@
     margin: 0 !important;
     padding: 0 !important;
     max-width: none !important;
+    width: 100% !important;
     border-radius: 0 !important;
   }
 
@@ -226,5 +236,15 @@
     border-radius: 0;
     padding: 0;
     max-width: none;
+    width: 100%;
+    min-height: 0;
+  }
+
+  /* Do not split tables, rows or the signature block across pages. */
+  .doc-paper table,
+  .doc-paper tr,
+  .doc-paper > div:last-child {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
