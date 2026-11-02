@@ -5,12 +5,14 @@ import {
   docTypeMeta,
   computeTotals,
   emptyItem,
+  showsPayment,
 } from "@/lib/doc-types";
 import { isTemplateBody, templateBodyFor } from "@/lib/doc-templates";
 import { inr } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Field,
   SelectField,
@@ -54,6 +56,7 @@ export default function DocumentForm({ form, setForm, settings }: any) {
   };
   const meta = docTypeMeta(form.doc_type);
   const totals = computeTotals(form.items, form.tax_rate);
+  const paymentVisible = showsPayment(form);
 
   // Changing the type swaps in that type's template unless the wording was edited by hand.
   const changeType = (value: any) =>
@@ -200,9 +203,43 @@ export default function DocumentForm({ form, setForm, settings }: any) {
         </div>
       </Field>
 
+      <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-white p-3">
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-medium text-slate-800">
+            Show payment &amp; amount section
+          </p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+            {paymentVisible
+              ? "Line-item amounts, totals, amount received, balance due and payment instructions appear on the printed paper."
+              : "Hidden on the printed paper, so no amounts or payment details show. Turn it on for quotations, invoices and receipts that need pricing."}
+          </p>
+          {typeof form.show_payment === "boolean" && (
+            <button
+              type="button"
+              onClick={() => update("show_payment", null)}
+              className="mt-1 text-[11px] font-medium text-blue-700 hover:underline"
+            >
+              Use the default for this document type
+            </button>
+          )}
+        </div>
+        <Switch
+          checked={paymentVisible}
+          onCheckedChange={(value: boolean) => update("show_payment", value)}
+          aria-label="Show payment and amount section"
+        />
+      </div>
+
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[12px] font-semibold text-slate-600">Line items</p>
+          <p className="text-[12px] font-semibold text-slate-600">
+            Line items
+            {!paymentVisible && (
+              <span className="ml-2 font-normal text-muted-foreground">
+                (saved, but hidden on the paper while the payment section is off)
+              </span>
+            )}
+          </p>
           <Button type="button" variant="outline" size="sm" onClick={addItem}>
             <Plus className="mr-1 h-3.5 w-3.5" /> Add item
           </Button>
