@@ -1,20 +1,26 @@
 import { num, round2 } from "@/lib/format";
-import { showsPayment } from "@/lib/doc-types";
+import { computeTotals, showsPayment } from "@/lib/doc-types";
 
 /**
  * Single source of truth for every amount on a document.
  *
- * Rules:
- * - Payments are the ledger. "received" adds, "refunded" subtracts. "pending" and
- *   "adjustment" entries never move a balance.
- * - An invoice or receipt linked to a project with an agreed value (project_value > 0)
- *   is "project billed": its total is that agreed value, and what has been received is
- *   every ledger entry for the project, whichever document it was recorded against.
- * - Every other document uses its own total and the payments recorded against it.
+ * Payments are the ledger: "received" adds, "refunded" subtracts, and "pending" or
+ * "adjustment" entries never move a balance.
  *
- * Cached columns on the Document row (total, amount_paid, balance_due, status) are only
- * a copy of these results. They are refreshed by syncPaymentBalances in db.ts, and every
- * screen reads the live result from here.
+ * Project-billed invoice (invoice linked to a project with an agreed value, and the
+ * payment section switched on):
+ *   total      = the project's actual price
+ *   toBePaid   = the sum of the amount lines on this invoice ("to be paid now")
+ *   balance    = total − toBePaid                            ("left to pay")
+ *   dueNow     = toBePaid − payments received on this invoice ("still to collect here")
+ *
+ * Project receipt: total is the project price, balance is what is left after the
+ * payments received for that project up to the receipt's own payment.
+ *
+ * Every other document: total is the document total, balance is total − received.
+ *
+ * Cached columns on the Document row are a copy of these results, refreshed by
+ * syncPaymentBalances in db.ts. Screens read the live result from here.
  */
 
 const PROJECT_BILLED_TYPES = ["invoice", "receipt"];
@@ -46,8 +52,7 @@ const byDateThenCreated = (a: any, b: any) =>
 
 /**
  * Builds the lookup used by documentFinancials. Each payment gets an effective project:
- * its own project_id, or the project of the document it is recorded against (for entries
- * saved before project_id was stored).
+ * its own project_id, or the project of the document it is recorded against.
  */
 export function buildLedger(payments: any[] = [], documents: any[] = []) {
   const docsById: Record<string, any> = Object.fromEntries(
@@ -55,8 +60,7 @@ export function buildLedger(payments: any[] = [], documents: any[] = []) {
   );
   const rows = (payments || []).map((payment: any) => ({
     ...payment,
-    _project_id:
-      payment.project_id || docsById[payment.document_id]?.project_id || "",
+    _project_id: payment.project_id || docsById[payment.document_id]?.project_id || "",
   }));
   return { payments: rows, docsById };
 }
@@ -65,53 +69,52 @@ export type Ledger = ReturnType<typeof buildLedger>;
 
 export const EMPTY_LEDGER: Ledger = { payments: [], docsById: {} };
 
-/** Live figures for one document. Used by the printed paper, the editor, lists and payment checks. */
 export type Financials = {
   billed: boolean;
   total: number;
+  toBePaid: number;
   thisAmount: number | null;
   received: number;
   balance: number;
+  dueNow: number;
   rows: any[];
 };
 
-const NO_FIGURES: Financials = { billed: false, total: 0, thisAmount: null, received: 0, balance: 0, rows: [] };
+const NO_FIGURES: Financials = {
+  billed: false,
+  total: 0,
+  toBePaid: 0,
+  thisAmount: null,
+  received: 0,
+  balance: 0,
+  dueNow: 0,
+  rows: [],
+};
 
+/** Live figures for one document. Used by the printed paper, the editor, lists and payment checks. */
 export function documentFinancials(doc: any, project: any, ledger: Ledger = EMPTY_LEDGER): Financials {
   if (!doc) return NO_FIGURES;
   const billed = isProjectBilled(doc, project);
 
-  if (billed) {
+  if (billed && doc.doc_type === "receipt") {
     const total = round2(num(project.project_value));
     const projectRows = ledger.payments
       .filter((p) => p._project_id === project.id)
       .sort(byDateThenCreated);
-
-    if (doc.doc_type === "receipt") {
-      // A receipt records one payment. Its figures are the balance after that payment.
-      const own = doc.payment_id
-        ? projectRows.find((p) => p.id === doc.payment_id)
-        : null;
-      const index = own ? projectRows.indexOf(own) : projectRows.length - 1;
-      const upTo = index >= 0 ? projectRows.slice(0, index + 1) : projectRows;
-      const received = ledgerNet(upTo);
-      return {
-        billed,
-        total,
-        thisAmount: own ? round2(num(own.amount)) : round2(num(doc.total)),
-        received,
-        balance: round2(Math.max(0, total - received)),
-        rows: projectRows,
-      };
-    }
-
-    const received = ledgerNet(projectRows);
+    // A receipt records one payment. Its figures are the position after that payment.
+    const own = doc.payment_id ? projectRows.find((p) => p.id === doc.payment_id) : null;
+    const index = own ? projectRows.indexOf(own) : projectRows.length - 1;
+    const upTo = index >= 0 ? projectRows.slice(0, index + 1) : projectRows;
+    const received = ledgerNet(upTo);
+    const balance = round2(Math.max(0, total - received));
     return {
       billed,
       total,
-      thisAmount: null,
+      toBePaid: total,
+      thisAmount: own ? round2(num(own.amount)) : round2(num(doc.total)),
       received,
-      balance: round2(Math.max(0, total - received)),
+      balance,
+      dueNow: balance,
       rows: projectRows,
     };
   }
@@ -119,22 +122,38 @@ export function documentFinancials(doc: any, project: any, ledger: Ledger = EMPT
   const docRows = ledger.payments
     .filter((p) => p.document_id === doc.id)
     .sort(byDateThenCreated);
-  const total = round2(num(doc.total));
   const received = ledgerNet(docRows);
+
+  if (billed) {
+    const total = round2(num(project.project_value));
+    const toBePaid = round2(computeTotals(doc.items || [], 0).subtotal);
+    return {
+      billed,
+      total,
+      toBePaid,
+      thisAmount: null,
+      received,
+      balance: round2(Math.max(0, total - toBePaid)),
+      dueNow: round2(Math.max(0, toBePaid - received)),
+      rows: docRows,
+    };
+  }
+
+  const total = round2(num(doc.total));
+  const balance = round2(Math.max(0, total - received));
   return {
-    billed,
+    billed: false,
     total,
+    toBePaid: total,
     thisAmount: null,
     received,
-    balance: round2(Math.max(0, total - received)),
+    balance,
+    dueNow: balance,
     rows: docRows,
   };
 }
 
-/**
- * Status implied by the numbers, following the same rules the rest of the app uses.
- * Cancelled and draft documents keep their status until someone changes it.
- */
+/** Status implied by the numbers. Cancelled and draft documents keep their status until changed. */
 export function statusFor(doc: any, fin: { total: number; received: number; balance: number }) {
   if (doc.status === "cancelled") return "cancelled";
   if (fin.total > 0 && fin.balance <= 0.009) return "paid";
@@ -146,12 +165,17 @@ export function statusFor(doc: any, fin: { total: number; received: number; bala
 
 /**
  * The status to store. The ledger decides it only when there is something to decide from:
- * a payment is recorded, the document is project-billed, or it was already marked part-paid.
- * Otherwise the status chosen by the user stands, so a manual "Paid" without a ledger entry is not reset.
+ * a payment is recorded, the invoice is project-billed, or it was already marked part-paid.
+ * Otherwise the status chosen by the user stands.
+ * For a project invoice the status follows the amount to be paid now, not the full price.
  */
-export function resolveStatus(doc: any, fin: { billed: boolean; rows: any[]; total: number; received: number; balance: number }) {
+export function resolveStatus(doc: any, fin: Financials) {
   const derived = fin.billed || fin.rows.length > 0 || doc.status === "partially_paid";
-  return derived ? statusFor(doc, fin) : doc.status;
+  if (!derived) return doc.status;
+  if (fin.billed && doc.doc_type === "invoice") {
+    return statusFor(doc, { total: fin.toBePaid, received: fin.received, balance: fin.dueNow });
+  }
+  return statusFor(doc, fin);
 }
 
 /** Outstanding amount read from the cached column, falling back only when the column is missing. */
