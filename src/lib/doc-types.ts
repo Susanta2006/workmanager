@@ -19,6 +19,17 @@ export const docTypeMeta = (value: any) => DOC_TYPES.find((type) => type.value =
 
 export const docTypeLabel = (value: any) => docTypeMeta(value).label;
 
+/**
+ * Whether the payment and amount section (line-item amounts, totals, amount received,
+ * balance due and payment instructions) appears on the printed paper.
+ * An explicit on/off choice saved on the document wins; otherwise financial types show it
+ * and agreements, NDAs and SOWs hide it.
+ */
+export const showsPayment = (doc: any) =>
+  typeof doc?.show_payment === "boolean"
+    ? doc.show_payment
+    : Boolean(docTypeMeta(doc?.doc_type).financial);
+
 export const DOC_STATUS = {
   draft: { label: "Draft", className: "bg-slate-100 text-slate-600 border-slate-200" },
   sent: { label: "Sent", className: "bg-blue-50 text-blue-700 border-blue-200" },
