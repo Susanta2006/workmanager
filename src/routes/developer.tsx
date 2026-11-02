@@ -79,9 +79,6 @@ function DeveloperPage() {
           <Link to="/" className="font-semibold tracking-tight hover:text-primary">
             {PRODUCT}
           </Link>
-          <Link to="/login" className="text-sm font-medium text-primary hover:underline">
-            Sign in
-          </Link>
         </div>
       </header>
 
@@ -158,25 +155,6 @@ function DeveloperPage() {
           </ul>
         </Section>
       </main>
-
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {new Date().getFullYear()} {DEVELOPER.company}. All rights reserved.
-          </p>
-          <nav aria-label="Policies" className="flex gap-4">
-            <Link to="/privacy" className="hover:text-foreground">
-              Privacy
-            </Link>
-            <Link to="/terms" className="hover:text-foreground">
-              Terms
-            </Link>
-            <Link to="/security" className="hover:text-foreground">
-              Security
-            </Link>
-          </nav>
-        </div>
-      </footer>
     </div>
   );
 }
