@@ -7,14 +7,15 @@ export default function LegalPage({ title, updated, children }: any) {
     <div className="min-h-[60vh] bg-background text-foreground">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link to="/" className="font-semibold tracking-tight hover:text-primary">
-            WorkManager
-          </Link>
           {user ? (
             <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
               Dashboard
+            </Link> 
+            ):(
+            <Link to="/" className="font-semibold tracking-tight hover:text-primary">
+              WorkManager
             </Link>
-          )}
+          }
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-10">
