@@ -7,7 +7,7 @@ export type Writing = { title: string; venue: string; url: string };
 
 export const DEVELOPER = {
   name: "Susanta Banik",
-  title: "AI/ML Engineer and Researcher",
+  title: "AI/ML Engineer, Founder and Researcher",
   company: "Shristi AI Web Creations",
   location: "Agartala, Tripura, India",
   udyam: "UDYAM-TR-08-0041945",
@@ -16,6 +16,7 @@ export const DEVELOPER = {
   profiles: [
     { label: "GitHub", url: "https://github.com/Susanta2006" },
     { label: "LinkedIn", url: "https://www.linkedin.com/in/susanta-banik" },
+    { label: "Company Linkedin", url: "https://www.linkedin.com/company/shristi-ai-web-creations" },
     { label: "DEV", url: "https://dev.to/susantabanik" },
   ],
   education: [
@@ -24,11 +25,12 @@ export const DEVELOPER = {
   ] satisfies Education[],
   certifications: ["IBM: Hadoop and Spark", "ISRO: Remote Sensing and AI"],
   experience: [
+    { role: "Founder & Developer", org: "Shristi AI Web Creations", period: "Aug 2026 – Present" },
+    { role: "AI & RAG Development Intern", org: "Kyma AI Innovations", period: "May 2026 – June 2026" },
     { role: "Machine Learning Intern", org: "Codec Technologies India", period: "Feb 2026 – Mar 2026" },
     { role: "Machine Learning Intern", org: "Saiket Systems", period: "Sep 2025 – Oct 2025" },
     { role: "Machine Learning Engineer", org: "Cognifyz Technologies", period: "May 2025 – Jul 2025" },
     { role: "Full Stack Web Developer Intern", org: "Unified Mentor", period: "Apr 2025 – Jul 2025" },
-    { role: "Data Analyst Intern", org: "Aspire Interns", period: "" },
   ] satisfies Experience[],
   writing: [
     {
