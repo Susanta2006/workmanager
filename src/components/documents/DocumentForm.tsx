@@ -1,0 +1,405 @@
+import { useQuery } from "@tanstack/react-query";
+import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from "lucide-react";
+import {
+  DOC_TYPES,
+  docTypeMeta,
+  computeTotals,
+  emptyItem,
+} from "@/lib/doc-types";
+import { isTemplateBody, templateBodyFor } from "@/lib/doc-templates";
+import { inr } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Field,
+  SelectField,
+  TextAreaField,
+  TextField,
+} from "@/components/common/FormFields";
+import { fetchClients } from "@/lib/clients";
+
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "accepted", label: "Accepted" },
+  { value: "partially_paid", label: "Partially paid" },
+  { value: "paid", label: "Paid" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+export default function DocumentForm({ form, setForm, settings }: any) {
+  const update = (key: any, value: any) => setForm((prev: any) => ({ ...prev, [key]: value }));
+  const clientsQuery = useQuery({
+    queryKey: ["form-clients"],
+    queryFn: () => fetchClients(),
+  });
+  const clients = clientsQuery.data || [];
+  const selectedClient = clients.find((c: any) => c.id === form.client_id);
+  const clientOptions = [
+    ...clients.map((c: any) => ({
+      value: c.id,
+      label: c.client_code ? `${c.name} · ${c.client_code}` : c.name,
+    })),
+    // A document saved before this dropdown existed keeps its typed name until a client is chosen.
+    ...(!selectedClient && form.client_name
+      ? [{ value: "__unlinked", label: `${form.client_name} (not in client list)` }]
+      : []),
+  ];
+  // Choosing a client stores its ID and name together, so the document always points at the record.
+  const pickClient = (id: any) => {
+    const client = clients.find((c: any) => c.id === id);
+    if (!client) return;
+    setForm((prev: any) => ({ ...prev, client_id: client.id, client_name: client.name }));
+  };
+  const meta = docTypeMeta(form.doc_type);
+  const totals = computeTotals(form.items, form.tax_rate);
+
+  // Changing the type swaps in that type's template unless the wording was edited by hand.
+  const changeType = (value: any) =>
+    setForm((prev: any) => ({
+      ...prev,
+      doc_type: value,
+      body: isTemplateBody(prev.body) ? templateBodyFor(value) : prev.body,
+    }));
+
+  const setItem = (index: any, patch: any) =>
+    setForm((prev: any) => ({
+      ...prev,
+      items: prev.items.map((item: any, i: any) =>
+        i === index ? { ...item, ...patch } : item,
+      ),
+    }));
+
+  const addItem = () =>
+    setForm((prev: any) => ({ ...prev, items: [...prev.items, emptyItem()] }));
+
+  const removeItem = (index: any) =>
+    setForm((prev: any) => ({
+      ...prev,
+      items: prev.items.filter((_: any, i: any) => i !== index),
+    }));
+
+  const moveItem = (index: any, direction: any) =>
+    setForm((prev: any) => {
+      const items = [...prev.items];
+      const target = index + direction;
+      if (target < 0 || target >= items.length) return prev;
+      [items[index], items[target]] = [items[target], items[index]];
+      return { ...prev, items };
+    });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <SelectField
+          label="Document type"
+          value={form.doc_type}
+          onChange={changeType}
+          options={DOC_TYPES.map((type) => ({
+            value: type.value,
+            label: type.label,
+          }))}
+          hint="Each type uses its own layout and default wording"
+        />
+        <div className="sm:col-span-1">
+          <p className="mb-1 text-[12px] font-medium text-slate-600">
+            Document number
+          </p>
+          <div className="flex h-9 items-center rounded-md border border-dashed border-border bg-secondary/50 px-3 text-[12px] text-muted-foreground">
+            {form.doc_number || "Assigned automatically on save"}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Unique, generated in the database
+          </p>
+        </div>
+        <SelectField
+          label="Client"
+          value={form.client_id || (form.client_name ? "__unlinked" : "")}
+          onChange={pickClient}
+          options={clientOptions}
+          placeholder="Choose a client"
+          hint="Name, contact and billing details come from the client record"
+        />
+        {selectedClient && (
+          <div className="rounded-md border border-border bg-secondary/40 p-3 text-[12px] text-muted-foreground sm:col-span-2">
+            <p className="font-medium text-foreground">
+              {selectedClient.name}
+              {selectedClient.client_code ? ` · ${selectedClient.client_code}` : ""}
+            </p>
+            <p>
+              {[selectedClient.contact_person, selectedClient.email, selectedClient.phone]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+            {selectedClient.billing_address && (
+              <p className="whitespace-pre-line">{selectedClient.billing_address}</p>
+            )}
+            {selectedClient.tax_id && <p>Tax ID: {selectedClient.tax_id}</p>}
+          </div>
+        )}
+        <TextField
+          label="Project name"
+          value={form.project_name || ""}
+          onChange={(value: any) => update("project_name", value)}
+          placeholder="e.g. Website redesign — Phase 1"
+        />
+        <TextField
+          label="Issue date"
+          type="date"
+          value={form.issue_date}
+          onChange={(value: any) => update("issue_date", value)}
+        />
+        <TextField
+          label={meta.expiry ? "Valid until" : "Due date"}
+          type="date"
+          value={meta.expiry ? form.valid_until : form.due_date}
+          onChange={(value: any) =>
+            update(meta.expiry ? "valid_until" : "due_date", value)
+          }
+        />
+        <SelectField
+          label="Status"
+          value={form.status}
+          onChange={(value: any) => update("status", value)}
+          options={STATUS_OPTIONS}
+        />
+        <TextField
+          label="Document title"
+          value={form.title}
+          onChange={(value: any) => update("title", value)}
+          placeholder={meta.label}
+        />
+      </div>
+
+      <Field
+        label={`${meta.label} wording`}
+        hint="Leave this as it is to use the standard, type-specific legal wording. Anything you write replaces it."
+      >
+        <Textarea
+          value={form.body || ""}
+          onChange={(event) => update("body", event.target.value)}
+          rows={12}
+          className="bg-white text-[11.5px] leading-relaxed"
+          placeholder={templateBodyFor(form.doc_type)}
+        />
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => update("body", templateBodyFor(form.doc_type))}
+          >
+            <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset to default template
+          </Button>
+          <span className="self-center text-[11px] text-muted-foreground">
+            {isTemplateBody(form.body)
+              ? "Using the default template"
+              : "Edited — your wording will be used"}
+          </span>
+        </div>
+      </Field>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-[12px] font-semibold text-slate-600">Line items</p>
+          <Button type="button" variant="outline" size="sm" onClick={addItem}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Add item
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {form.items.map((item: any, index: any) => (
+            <div
+              key={index}
+              className="rounded-lg border border-border bg-white p-2.5"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="flex-1">
+                  <Input
+                    value={item.description}
+                    onChange={(event) =>
+                      setItem(index, { description: event.target.value })
+                    }
+                    placeholder="Description of work or deliverable"
+                    className="h-8 text-[12.5px]"
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <div className="w-[70px]">
+                    <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Qty
+                    </p>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={item.quantity}
+                      onChange={(event) =>
+                        setItem(index, { quantity: Number(event.target.value) })
+                      }
+                      className="h-8 text-[12.5px]"
+                    />
+                  </div>
+                  <div className="w-[110px]">
+                    <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Rate
+                    </p>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.rate}
+                      onChange={(event) =>
+                        setItem(index, { rate: Number(event.target.value) })
+                      }
+                      className="h-8 text-[12.5px]"
+                    />
+                  </div>
+                  <div className="w-[100px]">
+                    <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Discount
+                    </p>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.discount}
+                      onChange={(event) =>
+                        setItem(index, { discount: Number(event.target.value) })
+                      }
+                      className="h-8 text-[12.5px]"
+                    />
+                  </div>
+                  <div className="w-[110px] pb-1.5 text-right text-[12.5px] font-medium tabular-nums text-slate-700">
+                    {inr(
+                      Math.max(
+                        0,
+                        Number(item.quantity || 0) * Number(item.rate || 0) -
+                          Number(item.discount || 0),
+                      ),
+                    )}
+                  </div>
+                  <div className="flex gap-0.5 pb-0.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => moveItem(index, -1)}
+                      title="Move up"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => moveItem(index, 1)}
+                      title="Move down"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-rose-500"
+                      onClick={() => removeItem(index)}
+                      title="Remove"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          {form.items.length === 0 && (
+            <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-[12px] text-muted-foreground">
+              No line items yet.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="space-y-3 lg:col-span-2">
+          <TextAreaField
+            label="Terms & conditions"
+            value={form.terms}
+            onChange={(value: any) => update("terms", value)}
+            rows={4}
+          />
+          <TextAreaField
+            label="Payment instructions"
+            value={form.payment_instructions}
+            onChange={(value: any) => update("payment_instructions", value)}
+            rows={2}
+            hint="Leave blank to use the company default from settings"
+          />
+          <TextAreaField
+            label="Notes"
+            value={form.notes}
+            onChange={(value: any) => update("notes", value)}
+            rows={2}
+          />
+        </div>
+        <div className="rounded-lg border border-border bg-slate-50/70 p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Summary
+          </p>
+          <TextField
+            label="Tax rate (%)"
+            type="number"
+            value={form.tax_rate}
+            onChange={(value: any) => update("tax_rate", Number(value))}
+          />
+          <dl className="mt-3 space-y-1.5 text-[12.5px]">
+            <Row label="Subtotal" value={inr(totals.subtotal)} />
+            <Row label="Discounts" value={inr(totals.discount_total)} />
+            <Row
+              label={`Tax (${form.tax_rate || 0}%)`}
+              value={inr(totals.tax_amount)}
+            />
+            <div className="border-t border-border pt-1.5">
+              <Row label="Total" value={inr(totals.total)} strong />
+            </div>
+            <Row label="Amount received" value={inr(form.amount_paid)} />
+            <Row
+              label="Balance due"
+              value={inr(
+                Math.max(0, totals.total - Number(form.amount_paid || 0)),
+              )}
+              strong
+            />
+          </dl>
+          {!settings.signature_uri && (
+            <p className="mt-3 rounded-lg border border-dashed border-border px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
+              Add a signature in Settings to print it above the signatory line.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value, strong }: any) {
+  return (
+    <div className="flex items-center justify-between">
+      <dt
+        className={
+          strong ? "font-semibold text-slate-800" : "text-muted-foreground"
+        }
+      >
+        {label}
+      </dt>
+      <dd
+        className={`tabular-nums ${strong ? "font-semibold text-slate-900" : "text-slate-700"}`}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}

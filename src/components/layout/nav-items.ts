@@ -1,0 +1,31 @@
+import {
+  LayoutDashboard,
+  Users,
+  FolderKanban,
+  ListChecks,
+  FileText,
+  Wallet,
+  Receipt,
+  BarChart3,
+  UsersRound,
+  Bell,
+  History,
+  Settings,
+  Banknote,
+} from "lucide-react";
+
+export const NAV_ITEMS = [
+  { key: "dashboard", label: "Overview", to: "/dashboard", icon: LayoutDashboard },
+  { key: "clients", label: "Clients", to: "/clients", icon: Users },
+  { key: "projects", label: "Projects", to: "/projects", icon: FolderKanban },
+  { key: "tasks", label: "Tasks & Calendar", to: "/tasks", icon: ListChecks },
+  { key: "documents", label: "Documents", to: "/documents", icon: FileText },
+  { key: "payments", label: "Payments", to: "/payments", icon: Wallet },
+  { key: "expenses", label: "Expenses", to: "/expenses", icon: Receipt },
+  { key: "reports", label: "Reports & Analytics", to: "/reports", icon: BarChart3 },
+  { key: "team", label: "Team", to: "/team", icon: UsersRound },
+  { key: "salary", label: "Salary & status", to: "/salary", icon: Banknote },
+  { key: "notifications", label: "Notifications", to: "/notifications", icon: Bell },
+  { key: "activity", label: "Activity Log", to: "/activity", icon: History },
+  { key: "settings", label: "Settings", to: "/settings", icon: Settings },
+];
