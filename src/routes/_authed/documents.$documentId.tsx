@@ -227,6 +227,7 @@ function DocumentDetailPage() {
   if (isLoading || !doc || !fin) return <Skeleton className="h-[600px] rounded-xl" />;
 
   const balance = fin.balance;
+  const stillToCollect = fin.dueNow;
 
   return (
     <div>
@@ -257,11 +258,22 @@ function DocumentDetailPage() {
               ) : (
                 doc.client_name || "No client"
               )}{" "}
-              · issued {fmtDate(doc.issue_date)} · total {inr(fin.total)} · received{" "}
-              {inr(fin.received)} · balance{" "}
-              <strong className={balance > 0 ? "text-amber-700" : "text-emerald-700"}>
-                {inr(balance)}
-              </strong>
+              · issued {fmtDate(doc.issue_date)}
+              {fin.billed && doc.doc_type === "invoice" ? (
+                <>
+                  {" "}· to be paid {inr(fin.toBePaid)} · actual price {inr(fin.total)} · left to pay{" "}
+                  <strong className={balance > 0 ? "text-amber-700" : "text-emerald-700"}>
+                    {inr(balance)}
+                  </strong>
+                </>
+              ) : (
+                <>
+                  {" "}· total {inr(fin.total)} · received {inr(fin.received)} · balance{" "}
+                  <strong className={balance > 0 ? "text-amber-700" : "text-emerald-700"}>
+                    {inr(balance)}
+                  </strong>
+                </>
+              )}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -311,6 +323,7 @@ function DocumentDetailPage() {
               projects={data.projects}
               settings={settings}
               ledger={ledger}
+              onRecordPayment={() => setPayOpen(true)}
             />
             <div className="mt-3 flex justify-end gap-2">
               <Button
@@ -346,7 +359,7 @@ function DocumentDetailPage() {
       {docPayments.length > 0 && (
         <div className="surface mt-4 p-4" data-no-print>
           <h2 className="mb-3 font-heading text-[14px] font-semibold">
-            {fin.billed ? "Payments for this project" : "Payments against this document"}
+            Payments against this document
           </h2>
           <ul className="divide-y divide-border/70">
             {docPayments.map((payment: any) => (
@@ -371,7 +384,7 @@ function DocumentDetailPage() {
             ))}
           </ul>
           <p className="mt-3 text-[11.5px] text-muted-foreground">
-            Received {inr(fin.received)} of {inr(fin.total)} · balance left {inr(balance)}
+            Received on this document {inr(fin.received)} · still to collect here {inr(stillToCollect)}
           </p>
         </div>
       )}
@@ -386,7 +399,7 @@ function DocumentDetailPage() {
           client_id: doc.client_id,
           project_id: doc.project_id,
           document_id: doc.id,
-          amount: balance,
+          amount: stillToCollect,
         }}
         onSaved={refresh}
       />
