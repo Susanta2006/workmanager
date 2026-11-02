@@ -615,6 +615,15 @@ begin
      and new.registration_completed_at is null then
     raise exception 'The user must complete Google registration before approval.';
   end if;
+  -- A signed-in approval never grants admin in the same step. The founder approves as a Member,
+  -- then grants Admin from the role editor, where the three-admin limit is checked.
+  -- Server-side registration (no signed-in user) is not affected.
+  if auth.uid() is not null
+     and old.account_status = 'pending'
+     and new.account_status = 'approved'
+     and new.role = 'admin' then
+    raise exception 'Approve as a Member first, then grant the Admin role separately.';
+  end if;
 
   if old.id = founding_id
      and (new.role is distinct from 'admin'
@@ -1948,6 +1957,15 @@ begin
      and new.account_status = 'approved'
      and new.registration_completed_at is null then
     raise exception 'The user must complete Google registration before approval.';
+  end if;
+  -- A signed-in approval never grants admin in the same step. The founder approves as a Member,
+  -- then grants Admin from the role editor, where the three-admin limit is checked.
+  -- Server-side registration (no signed-in user) is not affected.
+  if auth.uid() is not null
+     and old.account_status = 'pending'
+     and new.account_status = 'approved'
+     and new.role = 'admin' then
+    raise exception 'Approve as a Member first, then grant the Admin role separately.';
   end if;
   if old.id = founding_id
      and (new.role is distinct from 'admin'
