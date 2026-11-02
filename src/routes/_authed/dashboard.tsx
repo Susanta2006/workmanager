@@ -25,6 +25,7 @@ import {
   sumBy,
 } from "@/lib/report-data";
 import { daysUntil, fmtDate, inr, monthKey, num } from "@/lib/format";
+import { Briefcase } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import StatCard from "@/components/common/StatCard";
 import EmptyState from "@/components/common/EmptyState";
@@ -99,6 +100,9 @@ function DashboardPage() {
     return {
       months,
       thisMonth,
+      projectValue: projects
+        .filter((project: any) => project.status !== "cancelled")
+        .reduce((sum: number, project: any) => sum + num(project.project_value), 0),
       invoiced: sumBy(invoices, (doc: any) => doc.total),
       collected: cashOf(payments),
       expenses: sumBy(expenses, (expense: any) => expense.amount),
@@ -174,6 +178,14 @@ function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
         <StatCard
+          label="Total project value"
+          to="/projects"
+          value={inr(metrics.projectValue)}
+          hint={`${metrics.projects} project(s), excluding cancelled`}
+          icon={Briefcase}
+          tone="blue"
+        />
+        <StatCard
           label="Invoiced"
           to="/documents"
           value={inr(metrics.invoiced)}
@@ -197,6 +209,9 @@ function DashboardPage() {
           icon={Receipt}
           tone="rose"
         />
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:mt-3 sm:gap-3 xl:grid-cols-4">
         <StatCard
           label="Net profit"
           to="/reports"
@@ -205,9 +220,6 @@ function DashboardPage() {
           icon={TrendingUp}
           tone={netProfit >= 0 ? "emerald" : "rose"}
         />
-      </div>
-
-      <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:mt-3 sm:gap-3 xl:grid-cols-4">
         <StatCard
           label="Outstanding"
           to="/documents"
@@ -231,14 +243,6 @@ function DashboardPage() {
           hint={`${metrics.projects} total`}
           icon={FolderKanban}
           tone="cyan"
-        />
-        <StatCard
-          label="Open tasks"
-          to="/tasks"
-          value={metrics.openTasks}
-          hint={`${metrics.overdueTasks} overdue · ${metrics.completedTasks} done`}
-          icon={CheckCircle2}
-          tone={metrics.overdueTasks > 0 ? "rose" : "emerald"}
         />
       </div>
 

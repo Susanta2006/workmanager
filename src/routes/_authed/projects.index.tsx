@@ -266,7 +266,7 @@ function ProjectsPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Outstanding</p>
+                    <p className="text-muted-foreground">Still to receive</p>
                     <p
                       className={cn(
                         "font-semibold tabular-nums",
@@ -348,7 +348,7 @@ function ProjectsPage() {
                           </span>
                           {outstanding > 0 && (
                             <span className="text-amber-700">
-                              {inr(outstanding)} due
+                              {inr(outstanding)} to receive
                             </span>
                           )}
                         </div>

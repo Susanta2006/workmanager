@@ -278,7 +278,7 @@ function FinancialReportsPage() {
                   <TableCell className="text-right text-[12.5px] tabular-nums">
                     {inr(month.collected)}
                   </TableCell>
-                  <TableCell className="text-right text-[12.5px] tabular-nums text-rose-600">
+                  <TableCell className={`text-right text-[12.5px] tabular-nums ${month.expenses > 0 ? "text-rose-600" : "text-muted-foreground"}`}>
                     {inr(month.expenses)}
                   </TableCell>
                   <TableCell
@@ -301,7 +301,7 @@ function FinancialReportsPage() {
                 <TableCell className="text-right text-[12.5px] font-semibold tabular-nums">
                   {inr(report.totals.collected)}
                 </TableCell>
-                <TableCell className="text-right text-[12.5px] font-semibold tabular-nums text-rose-600">
+                <TableCell className={`text-right text-[12.5px] font-semibold tabular-nums ${report.totals.expenses > 0 ? "text-rose-600" : "text-muted-foreground"}`}>
                   {inr(report.totals.expenses)}
                 </TableCell>
                 <TableCell
@@ -388,7 +388,7 @@ function FinancialReportsPage() {
                       <TableCell className="text-right text-[12.5px] tabular-nums">
                         {inr(year.collected)}
                       </TableCell>
-                      <TableCell className="text-right text-[12.5px] tabular-nums text-rose-600">
+                      <TableCell className={`text-right text-[12.5px] tabular-nums ${year.expenses > 0 ? "text-rose-600" : "text-muted-foreground"}`}>
                         {inr(year.expenses)}
                       </TableCell>
                       <TableCell

@@ -66,17 +66,26 @@ function ProjectDetailPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["project-detail", projectId],
     queryFn: async () => {
-      const [project, milestones, tasks, documents, payments, users, clients, divisions] =
+      const project = await fetchOne("Project", projectId);
+      const [milestones, tasks, clientDocs, payments, users, clients, divisions] =
         await Promise.all([
-          fetchOne("Project", projectId),
           fetchAll("Milestone", { project_id: projectId }),
           fetchAll("Task", { project_id: projectId }),
-          fetchAll("Document", { project_id: projectId }),
+          project?.client_id
+            ? fetchAll("Document", { client_id: project.client_id })
+            : Promise.resolve([]),
           fetchAll("Payment", { project_id: projectId }),
           fetchUsers(),
           fetchClients(),
           fetchWorkDivisions(),
         ]);
+      // Documents linked by project ID. Older documents that only carry the project name are matched by name within the same client.
+      const titleKey = String(project?.title || "").trim().toLowerCase();
+      const documents = (clientDocs || []).filter((doc: any) =>
+        doc.project_id
+          ? doc.project_id === projectId
+          : String(doc.project_name || "").trim().toLowerCase() === titleKey,
+      );
       return {
         project,
         milestones,

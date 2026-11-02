@@ -1,3 +1,4 @@
+import { ACTIVE_PROJECT_STATUSES } from "@/lib/constants";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -66,9 +67,7 @@ function ClientReportPage() {
         client,
         projects: clientProjects.length,
         activeProjects: clientProjects.filter((project: any) =>
-          ["in_progress", "under_review", "awaiting_advance"].includes(
-            project.status,
-          ),
+          ACTIVE_PROJECT_STATUSES.includes(project.status),
         ).length,
         invoiced: sumBy(clientInvoices, (doc: any) => doc.total),
         received: cashOf(
