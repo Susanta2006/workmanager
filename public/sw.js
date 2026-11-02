@@ -1,12 +1,24 @@
 /*
- * WorkManager service worker.
+ * WorkManager service worker (v5).
  *
- * Caches only the installable shell and built static assets. Anything that carries sign-in
- * state (auth pages, server functions, API calls) or is served by the dev server (modules,
- * Vite internals) goes straight to the network, so a stale or broken cache can never hide
- * a real sign-in error. Bump CACHE whenever this logic changes so old caches are replaced.
+ * Caching rules
+ *  - Built JS/CSS under /assets/ has content hashes in its file names, so cache-first is safe.
+ *  - Installable shell files (manifest, icons, favicon, llms.txt) use network-first, so a
+ *    changed icon or name reaches installed apps on the next launch instead of being stuck
+ *    in an old cache.
+ *  - Page navigations are network-first; the cached shell is only an offline fallback.
+ *  - Sign-in pages, server functions, API calls and dev-server paths always go to the network.
+ *
+ * Updates
+ *  - A new version installs in the background but does NOT take over on its own. The app
+ *    shows an "Update now" prompt, and the page asks this worker to activate by sending
+ *    { type: "SKIP_WAITING" }. This keeps an open page from breaking while old and new
+ *    chunks are mixed, and the user decides when to reload.
+ *  - User data lives in the backend, not in this cache, so updating never removes it.
+ *
+ * Bump CACHE whenever this file's logic changes.
  */
-const CACHE = "workmanager-v4";
+const CACHE = "workmanager-v5";
 
 const SHELL = [
   "/manifest.webmanifest",
@@ -51,21 +63,20 @@ function isNetworkOnly(pathname) {
   return NETWORK_ONLY_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
 }
 
-function isCacheableAsset(url) {
-  if (isNetworkOnly(url.pathname)) return false;
-  return (
-    url.pathname.startsWith("/assets/") ||
-    SHELL.includes(url.pathname) ||
-    /\.(png|svg|ico|webmanifest)$/.test(url.pathname)
-  );
+function isHashedAsset(url) {
+  return url.pathname.startsWith("/assets/");
+}
+
+function isShellAsset(url) {
+  return SHELL.includes(url.pathname) || /\.(png|svg|ico|webmanifest)$/.test(url.pathname);
 }
 
 self.addEventListener("install", (event) => {
+  // No skipWaiting() here: the new version waits until the user accepts the update prompt.
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
       await Promise.all(SHELL.map((path) => cache.add(path).catch(() => undefined)));
-      await self.skipWaiting();
     })(),
   );
 });
@@ -78,6 +89,10 @@ self.addEventListener("activate", (event) => {
       await self.clients.claim();
     })(),
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 // Page navigations: network first. The app shell is kept only as an offline fallback.
@@ -95,14 +110,27 @@ async function handleNavigation(request, url) {
   }
 }
 
-// Built static assets: cache first, then network, remembering successful responses.
-async function handleAsset(request) {
+// Hashed build assets: a new build has new file names, so cache first is always correct.
+async function handleHashedAsset(request) {
   const cache = await caches.open(CACHE);
   const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok) cache.put(request, response.clone());
   return response;
+}
+
+// Shell files (icons, manifest): network first so changes arrive, cache as the fallback.
+async function handleShellAsset(request) {
+  const cache = await caches.open(CACHE);
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch {
+    const cached = await cache.match(request);
+    return cached ?? OFFLINE_RESPONSE();
+  }
 }
 
 self.addEventListener("fetch", (event) => {
@@ -121,7 +149,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (isCacheableAsset(url)) {
-    event.respondWith(handleAsset(request));
+  if (isHashedAsset(url)) {
+    event.respondWith(handleHashedAsset(request));
+    return;
+  }
+
+  if (isShellAsset(url)) {
+    event.respondWith(handleShellAsset(request));
   }
 });
