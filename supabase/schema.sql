@@ -2562,3 +2562,19 @@ begin
   end if;
 end
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Repair: create a pending profile for every sign-in account that has none. This covers
+-- accounts created before the trigger above existed. Safe to rerun.
+-- ---------------------------------------------------------------------------
+insert into public.profiles (id, email, full_name, role, account_status)
+select u.id,
+       u.email,
+       coalesce(u.raw_user_meta_data ->> 'full_name', u.raw_user_meta_data ->> 'name', ''),
+       'member',
+       'pending'
+from auth.users u
+where u.email is not null
+  and not exists (select 1 from public.profiles p where p.id = u.id)
+  and not exists (select 1 from public.profiles p where p.email = u.email)
+on conflict (id) do nothing;
