@@ -107,7 +107,7 @@ export function CollectionsChart({ data }: any) {
         />
         <Line
           type="monotone"
-          dataKey="received"
+          dataKey="collected"
           name="Received"
           stroke="#06b6d4"
           strokeWidth={2}
