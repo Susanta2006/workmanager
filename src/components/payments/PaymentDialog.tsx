@@ -1,15 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { backend } from "@/api/backend";
 import { useAuth } from "@/lib/AuthContext";
-import {
-  logActivity,
-  nextSequence,
-  pushNotification,
-  recalcDocumentPayments,
-} from "@/lib/db";
+import { fetchAll, logActivity, nextSequence, pushNotification, syncPaymentBalances } from "@/lib/db";
+import { buildLedger, documentFinancials } from "@/lib/doc-finance";
 import { PAYMENT_METHODS } from "@/lib/constants";
-import { inr } from "@/lib/format";
+import { inr, num } from "@/lib/format";
 import {
   Dialog,
   DialogContent,
@@ -57,6 +53,8 @@ export default function PaymentDialog({
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [ledgerPayments, setLedgerPayments] = useState<any[]>([]);
+  const [ledgerDocs, setLedgerDocs] = useState<any[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -64,6 +62,22 @@ export default function PaymentDialog({
     if (payment?.id) setForm({ ...emptyForm, ...payment });
     else setForm({ ...emptyForm, ...defaults });
   }, [open, defaults, payment]);
+
+  // Load the ledger each time the dialog opens, so balance checks use the latest payments.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    Promise.all([fetchAll("Payment", null), fetchAll("Document", null)])
+      .then(([payments, docs]) => {
+        if (!alive) return;
+        setLedgerPayments(payments);
+        setLedgerDocs(docs);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [open]);
 
   const set = (key: any) => (value: any) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -78,14 +92,35 @@ export default function PaymentDialog({
   ).filter((d: any) => ["invoice", "quotation"].includes(d.doc_type));
   const selectedInvoice = documents.find((d: any) => d.id === form.document_id);
 
+  // The ledger without the entry being edited, so its own amount is not counted twice.
+  const ledger = useMemo(
+    () =>
+      buildLedger(
+        ledgerPayments.filter((p: any) => p.id !== payment?.id),
+        ledgerDocs.length ? ledgerDocs : documents,
+      ),
+    [ledgerPayments, ledgerDocs, documents, payment?.id],
+  );
+
+  const figuresFor = (doc: any) =>
+    doc
+      ? documentFinancials(
+          doc,
+          projects.find((p: any) => p.id === doc.project_id),
+          ledger,
+        )
+      : null;
+  const selectedFin = figuresFor(selectedInvoice);
+
   const chooseInvoice = (documentId: any) => {
     const doc = documents.find((d: any) => d.id === documentId);
+    const fin = figuresFor(doc);
     setForm((prev) => ({
       ...prev,
       document_id: documentId,
       client_id: doc?.client_id || prev.client_id,
       project_id: doc?.project_id || prev.project_id,
-      amount: doc ? String(Number(doc.balance_due ?? doc.total ?? 0)) : prev.amount,
+      amount: fin ? String(fin.balance) : prev.amount,
     }));
   };
 
@@ -100,63 +135,63 @@ export default function PaymentDialog({
       return;
     }
     if (form.status !== "refunded" && Number(form.amount) < 0) {
-      setError(
-        "A received payment cannot be negative — record a refund instead.",
-      );
+      setError("A received payment cannot be negative — record a refund instead.");
       return;
     }
+    // Overpayment guard: a received payment against an invoice may not exceed what is still owed.
+    if (form.status === "received" && selectedInvoice?.doc_type === "invoice" && selectedFin) {
+      if (Number(form.amount) > selectedFin.balance + 0.004) {
+        setError(
+          selectedFin.balance <= 0
+            ? `${selectedInvoice.doc_number} is already fully paid. Record an adjustment or refund instead.`
+            : `This would take ${selectedInvoice.doc_number} above its balance. Balance left to pay is ${inr(selectedFin.balance)}.`,
+        );
+        return;
+      }
+    }
+
+    // A payment against a document always belongs to that document's project, so project totals stay correct.
+    const linkedProject = selectedInvoice?.project_id || form.project_id || "";
+    const body = {
+      ...form,
+      project_id: linkedProject,
+      amount: Number(form.amount),
+    };
+
     setSaving(true);
     setError("");
     try {
       let saved;
       if (payment?.id) {
-        saved = await backend.entities.Payment.update(payment.id, {
-          ...form,
-          amount: Number(form.amount),
-        });
-        await recalcDocumentPayments(payment.document_id);
-        if (saved.document_id && saved.document_id !== payment.document_id)
-          await recalcDocumentPayments(saved.document_id);
+        saved = await backend.entities.Payment.update(payment.id, body);
       } else {
-        const payment_code = await nextSequence(
-          "Payment",
-          "payment_code",
-          "PAY",
-        );
-        saved = await backend.entities.Payment.create({
-          ...form,
-          amount: Number(form.amount),
-          payment_code,
-        });
-        if (saved.document_id) await recalcDocumentPayments(saved.document_id);
+        const payment_code = await nextSequence("Payment", "payment_code", "PAY");
+        saved = await backend.entities.Payment.create({ ...body, payment_code });
       }
+      // Refreshes the payment's old and new document, and every invoice and receipt in the affected project.
+      await syncPaymentBalances(payment?.id ? payment : null, saved);
+
+      const action = payment?.id
+        ? "Payment updated"
+        : form.status === "refunded"
+          ? "Refund recorded"
+          : "Payment recorded";
       await logActivity({
         user,
-        action: payment?.id
-          ? "Payment updated"
-          : form.status === "refunded"
-            ? "Refund recorded"
-            : "Payment recorded",
+        action,
         entityType: "Payment",
         entityId: saved.id,
         label: `${saved.payment_code || payment?.payment_code || ""} · ${inr(saved.amount)}`,
         details: selectedInvoice ? `Against ${selectedInvoice.doc_number}` : "",
       });
       await pushNotification({
-        title:
-          form.status === "refunded" ? "Refund recorded" : "Payment received",
+        title: form.status === "refunded" ? "Refund recorded" : "Payment received",
         message: `${inr(saved.amount)} ${form.status === "refunded" ? "refunded to" : "received from"} ${clients.find((c: any) => c.id === saved.client_id)?.name || "client"}.`,
         type: "payment",
         link: "/payments",
         relatedRecordId: saved.id,
       });
-      toast.success(
-        payment?.id
-          ? "Payment updated"
-          : form.status === "refunded"
-            ? "Refund recorded"
-            : "Payment recorded",
-      );
+      toast.success(action);
       onSaved?.(saved);
       onOpenChange(false);
     } catch (err: any) {
@@ -174,8 +209,7 @@ export default function PaymentDialog({
             {payment?.id ? "Edit payment entry" : "Record payment"}
           </DialogTitle>
           <DialogDescription className="text-[12.5px]">
-            Payments are kept as separate ledger entries; invoice balances
-            update automatically.
+            Payments are kept as separate ledger entries; invoice balances update automatically.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
@@ -192,10 +226,7 @@ export default function PaymentDialog({
               label="Project"
               value={form.project_id}
               onChange={set("project_id")}
-              options={projectOptions.map((p: any) => ({
-                value: p.id,
-                label: p.title,
-              }))}
+              options={projectOptions.map((p: any) => ({ value: p.id, label: p.title }))}
               placeholder="Optional"
             />
             <SelectField
@@ -204,7 +235,7 @@ export default function PaymentDialog({
               onChange={chooseInvoice}
               options={invoiceOptions.map((d: any) => ({
                 value: d.id,
-                label: `${d.doc_number} · balance ${inr(d.balance_due ?? d.total)}`,
+                label: `${d.doc_number} · balance ${inr(figuresFor(d)?.balance ?? d.balance_due ?? d.total)}`,
               }))}
               placeholder="Unlinked payment"
               className="sm:col-span-2"
@@ -253,30 +284,24 @@ export default function PaymentDialog({
               className="sm:col-span-2"
             />
           </div>
-          {selectedInvoice && (
+          {selectedInvoice && selectedFin && (
             <p className="rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-slate-600">
-              {selectedInvoice.doc_number} · total {inr(selectedInvoice.total)}{" "}
-              · already received {inr(selectedInvoice.amount_paid)} · balance{" "}
-              <strong>
-                {inr(selectedInvoice.balance_due ?? selectedInvoice.total)}
-              </strong>
+              {selectedInvoice.doc_number} · total {inr(selectedFin.total)} · already received{" "}
+              {inr(selectedFin.received)} · balance left <strong>{inr(selectedFin.balance)}</strong>
+              {num(form.amount) > 0 && form.status === "received" && (
+                <>
+                  {" "}· after this payment{" "}
+                  <strong>{inr(Math.max(0, selectedFin.balance - num(form.amount)))}</strong>
+                </>
+              )}
             </p>
           )}
           <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving
-                ? "Saving…"
-                : payment?.id
-                  ? "Save changes"
-                  : "Record payment"}
+              {saving ? "Saving…" : payment?.id ? "Save changes" : "Record payment"}
             </Button>
           </DialogFooter>
         </form>
