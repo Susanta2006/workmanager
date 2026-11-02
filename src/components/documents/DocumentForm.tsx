@@ -20,6 +20,7 @@ import {
   TextField,
 } from "@/components/common/FormFields";
 import { fetchClients } from "@/lib/clients";
+import { fetchAll } from "@/lib/db";
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
@@ -52,7 +53,33 @@ export default function DocumentForm({ form, setForm, settings }: any) {
   const pickClient = (id: any) => {
     const client = clients.find((c: any) => c.id === id);
     if (!client) return;
-    setForm((prev: any) => ({ ...prev, client_id: client.id, client_name: client.name }));
+    setForm((prev: any) => {
+      // A different client means the previously chosen project no longer applies.
+      const changed = prev.client_id !== client.id;
+      return {
+        ...prev,
+        client_id: client.id,
+        client_name: client.name,
+        project_id: changed ? "" : prev.project_id,
+        project_name: changed ? "" : prev.project_name,
+      };
+    });
+  };
+
+  const projectsQuery = useQuery({
+    queryKey: ["form-projects", form.client_id],
+    queryFn: () => (form.client_id ? fetchAll("Project", { client_id: form.client_id }) : Promise.resolve([])),
+    enabled: Boolean(form.client_id),
+  });
+  const clientProjects = projectsQuery.data || [];
+  const projectOptions = clientProjects.map((p: any) => ({
+    value: p.id,
+    label: p.project_code ? `${p.title} · ${p.project_code}` : p.title,
+  }));
+  const pickProject = (id: any) => {
+    const project = clientProjects.find((p: any) => p.id === id);
+    if (!project) return;
+    setForm((prev: any) => ({ ...prev, project_id: project.id, project_name: project.title }));
   };
   const meta = docTypeMeta(form.doc_type);
   const totals = computeTotals(form.items, form.tax_rate);
@@ -141,11 +168,22 @@ export default function DocumentForm({ form, setForm, settings }: any) {
             {selectedClient.tax_id && <p>Tax ID: {selectedClient.tax_id}</p>}
           </div>
         )}
-        <TextField
-          label="Project name"
-          value={form.project_name || ""}
-          onChange={(value: any) => update("project_name", value)}
-          placeholder="e.g. Website redesign — Phase 1"
+        <SelectField
+          label="Project"
+          value={form.project_id || (form.project_name ? "__unlinked" : "")}
+          onChange={pickProject}
+          options={[
+            ...projectOptions,
+            ...(!form.project_id && form.project_name
+              ? [{ value: "__unlinked", label: `${form.project_name} (not linked to a project)` }]
+              : []),
+          ]}
+          placeholder={form.client_id ? "Choose a project" : "Choose a client first"}
+          hint={
+            form.client_id && !clientProjects.length
+              ? "This client has no projects yet. Create one under Projects first."
+              : "Only this client's projects are listed"
+          }
         />
         <TextField
           label="Issue date"
