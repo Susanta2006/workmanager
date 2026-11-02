@@ -283,7 +283,7 @@ function SettingsPage() {
                 className="sm:col-span-2"
               />
               <TextField
-                label="Udyam registration number"
+                label="Registration Number"
                 value={form.udyam_number}
                 onChange={set("udyam_number")}
               />
