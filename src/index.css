@@ -1,0 +1,230 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 217 91% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 19% 45%;
+    --accent: 214 95% 96%;
+    --accent-foreground: 217 91% 40%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 55%;
+    --chart-1: 217 91% 55%;
+    --chart-2: 189 94% 43%;
+    --chart-3: 271 68% 56%;
+    --chart-4: 158 64% 42%;
+    --chart-5: 35 92% 55%;
+    --radius: 0.75rem;
+    --font-heading: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-body: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-display: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --brand-blue: 217 91% 53%;
+    --brand-violet: 271 68% 52%;
+    --brand-cyan: 189 94% 43%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 95% 96%;
+    --sidebar-accent-foreground: 217 91% 40%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 55%;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 222 47% 7%;
+    --foreground: 210 40% 96%;
+    --card: 222 40% 10%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 40% 11%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 217 91% 64%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 217 25% 16%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 217 25% 16%;
+    --muted-foreground: 215 20% 68%;
+    --accent: 217 45% 20%;
+    --accent-foreground: 213 94% 80%;
+    --destructive: 0 75% 62%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 25% 20%;
+    --input: 217 25% 22%;
+    --ring: 217 91% 66%;
+    --chart-1: 217 91% 66%;
+    --chart-2: 189 90% 52%;
+    --chart-3: 271 75% 70%;
+    --chart-4: 158 60% 52%;
+    --chart-5: 35 92% 62%;
+    --brand-blue: 217 91% 66%;
+    --brand-violet: 271 75% 70%;
+    --brand-cyan: 189 90% 52%;
+    --sidebar-background: 222 40% 9%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 217 91% 64%;
+    --sidebar-primary-foreground: 222 47% 8%;
+    --sidebar-accent: 217 45% 18%;
+    --sidebar-accent-foreground: 213 94% 80%;
+    --sidebar-border: 217 25% 20%;
+    --sidebar-ring: 217 91% 66%;
+  }
+}
+
+@layer base {
+  /* Stop the rubber-band bounce and native pull-to-refresh so the app's own gestures win. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
+  .dark body {
+    background-image: radial-gradient(circle at 12% -10%, hsl(217 60% 18% / 0.6) 0%, transparent 45%),
+      radial-gradient(circle at 92% -20%, hsl(271 40% 18% / 0.5) 0%, transparent 40%);
+  }
+
+  /* Buttons, tabs and navigation links are controls, not text: don't let long-press select them. */
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  nav a {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    background-image: radial-gradient(circle at 12% -10%, hsl(217 91% 96%) 0%, transparent 45%),
+      radial-gradient(circle at 92% -20%, hsl(271 68% 97%) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-heading tracking-tight;
+  }
+
+  ::selection {
+    background: hsl(217 91% 90%);
+  }
+}
+
+@layer utilities {
+  .brand-text {
+    background-image: linear-gradient(115deg, hsl(var(--brand-blue)) 10%, hsl(var(--brand-violet)) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .surface {
+    @apply rounded-xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-16px_rgba(15,23,42,0.18)];
+  }
+
+  .hairline {
+    @apply border-border/70;
+  }
+
+  .scroll-slim::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+
+  .scroll-slim::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: hsl(214 20% 82%);
+  }
+}
+
+/*
+ * iOS and Android WebViews zoom the page when a field with font-size under 16px is focused.
+ * Forced with !important because the Tailwind text-size utilities would otherwise override it.
+ */
+@media (max-width: 767px), (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* A4 document paper, used for the printable preview */
+.doc-paper {
+  width: 100%;
+  max-width: 210mm;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  line-height: 1.55;
+  padding: 18mm 16mm;
+  box-shadow: 0 24px 60px -30px rgba(15, 23, 42, 0.45);
+  border-radius: 4px;
+}
+
+.doc-paper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Phones: keep the A4 page readable instead of shrinking the wide margin. */
+@media (max-width: 640px) {
+  .doc-paper {
+    padding: 9mm 7mm;
+    font-size: 10px;
+    border-radius: 6px;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+  }
+
+  [data-no-print] {
+    display: none !important;
+  }
+
+  [data-print-area] {
+    box-shadow: none !important;
+    border: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+  }
+
+  .doc-paper {
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    max-width: none;
+  }
+}
