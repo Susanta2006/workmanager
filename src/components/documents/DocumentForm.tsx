@@ -22,8 +22,6 @@ import {
 import { fetchClients } from "@/lib/clients";
 import { fetchAll } from "@/lib/db";
 import { EMPTY_LEDGER, documentFinancials, isProjectBilled } from "@/lib/doc-finance";
-import { fmtDate } from "@/lib/format";
-import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
@@ -34,7 +32,7 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_LEDGER }: any) {
+export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_LEDGER, onRecordPayment }: any) {
   const update = (key: any, value: any) => setForm((prev: any) => ({ ...prev, [key]: value }));
   const clientsQuery = useQuery({
     queryKey: ["form-clients"],
@@ -95,7 +93,6 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
     selectedProject,
     ledger,
   );
-  const billedRows = (fin?.rows || []).filter((p: any) => ["received", "refunded"].includes(p.status));
 
   // Changing the type swaps in that type's template unless the wording was edited by hand.
   const changeType = (value: any) =>
@@ -282,34 +279,65 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
 
       {billed ? (
         <div className="rounded-lg border border-border bg-white p-3">
-          <p className="mb-2 text-[12px] font-semibold text-slate-600">
-            Payments received for {selectedProject?.title}
-          </p>
-          {billedRows.length === 0 ? (
-            <p className="text-[12px] text-muted-foreground">
-              No payments yet. Record them from the Record payment button and they appear here and on the invoice automatically.
-            </p>
-          ) : (
-            <ul className="divide-y divide-border/70 text-[12px]">
-              {billedRows.map((payment: any) => (
-                <li key={payment.id} className="flex items-center justify-between gap-2 py-1.5">
-                  <span>
-                    {fmtDate(payment.payment_date)} · {payment.payment_code}
-                    {" · "}
-                    {PAYMENT_METHOD_LABELS[payment.method] || payment.method}
-                    {payment.status === "refunded" ? " (refund)" : ""}
-                  </span>
-                  <span className="tabular-nums font-medium">
-                    {payment.status === "refunded" ? "−" : ""}
-                    {inr(payment.amount)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-[12px] font-semibold text-slate-600">
+                Amounts to be paid on this invoice
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Add each amount due now (advance, milestone). Together they make the total to be paid.
+              </p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={addItem}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add amount
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {form.items.map((item: any, index: any) => (
+              <div key={index} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  value={item.description}
+                  onChange={(event) => setItem(index, { description: event.target.value })}
+                  placeholder="e.g. Advance (30%), Milestone 2"
+                  className="h-8 flex-1 text-[12.5px]"
+                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.rate}
+                    onChange={(event) =>
+                      setItem(index, { rate: Number(event.target.value), quantity: 1, discount: 0 })
+                    }
+                    placeholder="Amount (₹)"
+                    className="h-8 w-[150px] text-[12.5px]"
+                  />
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveItem(index, -1)} title="Move up">
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveItem(index, 1)} title="Move down">
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-rose-500" onClick={() => removeItem(index)} title="Remove">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {form.items.length === 0 && (
+              <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-[12px] text-muted-foreground">
+                No amounts added yet. Add the amount to be paid now.
+              </p>
+            )}
+          </div>
+          {onRecordPayment && (
+            <div className="mt-3 flex justify-end">
+              <Button type="button" variant="outline" size="sm" onClick={onRecordPayment}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> Record payment received
+              </Button>
+            </div>
           )}
-          <p className="mt-2 border-t border-border pt-2 text-right text-[12.5px] font-semibold tabular-nums">
-            Total received {inr(fin?.received)}
-          </p>
         </div>
       ) : (
       <div>
@@ -479,11 +507,13 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
           )}
           {billed ? (
             <dl className="mt-3 space-y-1.5 text-[12.5px]">
-              <Row label="Project agreed value" value={inr(fin?.total)} strong />
-              <Row label="Amount received" value={inr(fin?.received)} />
-              <Row label="Balance left to pay" value={inr(fin?.balance)} strong />
+              <Row label="Total amount to be paid" value={inr(fin?.toBePaid)} />
+              <Row label="Total amount (actual price)" value={inr(fin?.total)} />
+              <div className="border-t border-border pt-1.5">
+                <Row label="Amount left to pay" value={inr(fin?.balance)} strong />
+              </div>
               <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
-                Filled in from the project. Payments are recorded under Payments and listed on the invoice.
+                The actual price comes from the project. Payments received are listed under Payments.
               </p>
             </dl>
           ) : (
