@@ -52,7 +52,7 @@ export default function DocumentPaper({ doc, client, project, settings }: any) {
             <p>Issue date: {fmtDate(doc.issue_date)}</p>
             {doc.due_date && <p>Due date: {fmtDate(doc.due_date)}</p>}
             {doc.valid_until && <p>Valid until: {fmtDate(doc.valid_until)}</p>}
-            {settings.udyam_number && <p>Udyam: {settings.udyam_number}</p>}
+            {settings.udyam_number && <p>Registration No.: {settings.udyam_number}</p>}
             {settings.gstin && <p>GSTIN: {settings.gstin}</p>}
           </div>
         </div>
