@@ -30,7 +30,7 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
 
   return (
     <div className="doc-paper mx-auto" data-print-area>
-      <div className="flex items-start justify-between gap-6 border-b border-slate-200 pb-5">
+      <div className="avoid-break flex items-start justify-between gap-6 border-b border-slate-200 pb-5">
         <div className="flex items-start gap-3">
           {settings.logo_url && (
             <img src={settings.logo_url} alt="" className="h-12 w-12 object-contain" />
@@ -65,7 +65,7 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-6">
+      <div className="avoid-break mt-5 grid grid-cols-2 gap-6">
         <div>
           <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
             Prepared for
@@ -145,7 +145,7 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
       )}
 
       {showPayment && (
-        <div className="mt-3 flex flex-col items-end">
+        <div className="avoid-break mt-3 flex flex-col items-end">
           <table className="w-[58%] text-[10px]">
             <tbody>
               {billed ? (
@@ -243,7 +243,7 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
             </tbody>
           </table>
           {billed && isInvoice && (
-            <div className="mt-3 flex w-[58%] items-center justify-between rounded border-2 border-slate-900 px-3 py-2">
+            <div className="avoid-break mt-3 flex w-[58%] items-center justify-between rounded border-2 border-slate-900 px-3 py-2">
               <span className="font-heading text-[11px] font-bold uppercase tracking-wide text-slate-900">
                 Total amount to be paid
               </span>
@@ -258,8 +258,8 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
       <div
         className={
           showPayment
-            ? "mt-6 grid grid-cols-2 gap-6 text-[9.5px] leading-relaxed text-slate-600"
-            : "mt-6 grid grid-cols-1 gap-6 text-[9.5px] leading-relaxed text-slate-600"
+            ? "avoid-break mt-6 grid grid-cols-2 gap-6 text-[9.5px] leading-relaxed text-slate-600"
+            : "avoid-break mt-6 grid grid-cols-1 gap-6 text-[9.5px] leading-relaxed text-slate-600"
         }
       >
         {showPayment && (
@@ -286,13 +286,13 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
       </div>
 
       {doc.notes && (
-        <div className="mt-4 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-[9.5px] leading-relaxed text-slate-600">
+        <div className="avoid-break mt-4 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-[9.5px] leading-relaxed text-slate-600">
           <span className="font-semibold text-slate-700">Notes: </span>
           {doc.notes}
         </div>
       )}
 
-      <div className="mt-10">
+      <div className="avoid-break mt-10 pb-2">
         <div className="flex items-end justify-between gap-8">
           {isAgreement ? (
             <div className="w-[200px] text-[9.5px] text-slate-600">
