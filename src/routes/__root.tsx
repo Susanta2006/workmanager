@@ -41,6 +41,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "business workspace, client management, project management, documents, invoices, payments, expenses, reports, WorkManager",
       },
+      {
+        name: "google-site-verification",
+        content: "8o9Dm94uzc3XtGBMijfLCeGXH8k0MQgKiY1eZskSbjE",
+      },
       { name: "author", content: DEVELOPER.company },
       { name: "robots", content: "index, follow" },
       { name: "application-name", content: APP_NAME },
