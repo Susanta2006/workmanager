@@ -27,6 +27,7 @@ import { downloadDocumentPdf, pdfFilename } from "@/lib/pdf-export";
 import { fmtDate, inr, num } from "@/lib/format";
 import DocumentForm from "@/components/documents/DocumentForm";
 import DocumentPaper from "@/components/documents/DocumentPaper";
+import FitToWidth from "@/components/documents/FitToWidth";
 import PaymentDialog from "@/components/payments/PaymentDialog";
 import StatusBadge from "@/components/common/StatusBadge";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -344,7 +345,7 @@ function DocumentDetailPage() {
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-slate-100 p-3 print:bg-white print:p-0">
+      <FitToWidth className="rounded-xl bg-slate-100 p-3 print:bg-white print:p-0">
         <div ref={paperRef}>
           <DocumentPaper
             doc={doc}
@@ -354,7 +355,7 @@ function DocumentDetailPage() {
             ledger={ledger}
           />
         </div>
-      </div>
+      </FitToWidth>
 
       {docPayments.length > 0 && (
         <div className="surface mt-4 p-4" data-no-print>

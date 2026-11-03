@@ -15,6 +15,7 @@ import { inr } from "@/lib/format";
 import PageHeader from "@/components/common/PageHeader";
 import DocumentForm from "@/components/documents/DocumentForm";
 import DocumentPaper from "@/components/documents/DocumentPaper";
+import FitToWidth from "@/components/documents/FitToWidth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchClients } from "@/lib/clients";
@@ -188,7 +189,7 @@ function NewDocumentEditor({ search, settings, data }: any) {
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Live preview
         </p>
-        <div className="overflow-x-auto rounded-xl bg-slate-100 p-3">
+        <FitToWidth className="rounded-xl bg-slate-100 p-3">
           <DocumentPaper
             doc={previewDoc}
             client={client || data.clients.find((c: any) => c.id === form.client_id)}
@@ -196,7 +197,7 @@ function NewDocumentEditor({ search, settings, data }: any) {
             settings={settings}
             ledger={ledger}
           />
-        </div>
+        </FitToWidth>
       </div>
     </div>
   );
