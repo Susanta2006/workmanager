@@ -187,19 +187,32 @@
   border-collapse: collapse;
 }
 
-/* Phones: keep the A4 page readable instead of shrinking the wide margin. */
-@media (max-width: 640px) {
-  .doc-paper {
-    padding: 9mm 7mm;
-    font-size: 10px;
-    border-radius: 6px;
-  }
+/* The paper is always the same A4 layout; phones scale the whole page (see FitToWidth) instead of
+   reflowing it, so tables and totals never change shape on a small screen. */
+.doc-fit-measure {
+  width: 100%;
+}
+
+.doc-fit {
+  transform-origin: top left;
 }
 
 @media print {
+  /* A zero page margin is what removes the browser's date, title, URL and page number from the
+     printout. The spacing that margin used to give is the paper's own padding below. */
   @page {
     size: A4 portrait;
-    margin: 12mm 12mm 14mm 12mm;
+    margin: 0;
+  }
+
+  .doc-fit-measure {
+    height: auto !important;
+  }
+
+  .doc-fit {
+    transform: none !important;
+    margin-left: 0 !important;
+    width: 100% !important;
   }
 
   html,
@@ -234,7 +247,7 @@
   .doc-paper {
     box-shadow: none;
     border-radius: 0;
-    padding: 0;
+    padding: 12mm 12mm 14mm 12mm;
     max-width: none;
     width: 100%;
     min-height: 0;
