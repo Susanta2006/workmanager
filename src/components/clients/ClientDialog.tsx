@@ -22,6 +22,8 @@ import {
 
 const emptyForm = {
   name: "",
+  legal_name: "",
+  authorised_signatory_name: "",
   client_type: "business",
   contact_person: "",
   email: "",
@@ -143,6 +145,20 @@ export default function ClientDialog({ open, onOpenChange, client, onSaved }: an
               onChange={set("name")}
               required
               className="sm:col-span-2"
+            />
+            <TextField
+              label="Legal name (for agreements)"
+              value={form.legal_name || ""}
+              onChange={set("legal_name")}
+              className="sm:col-span-2"
+              hint="Leave blank to use the client / organisation name above."
+            />
+            <TextField
+              label="Authorised signatory (for agreements)"
+              value={form.authorised_signatory_name || ""}
+              onChange={set("authorised_signatory_name")}
+              className="sm:col-span-2"
+              hint="Enter only a person authorised to execute agreements on behalf of this client. Contact person is not used as a fallback."
             />
             <SelectField
               label="Client type"
