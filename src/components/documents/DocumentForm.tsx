@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from "lucide-react";
 import {
   DOC_TYPES,
@@ -88,16 +87,6 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
   const totals = computeTotals(form.items, form.tax_rate);
   const paymentVisible = showsPayment(form);
   const selectedProject = clientProjects.find((p: any) => p.id === form.project_id);
-  const milestonesQuery = useQuery({
-    queryKey: ["sow-milestones-snapshot", selectedProject?.id],
-    queryFn: () => fetchAll("Milestone", { project_id: selectedProject.id }),
-    enabled: form.doc_type === "sow" && Boolean(selectedProject?.id),
-  });
-  useEffect(() => {
-    if (form.doc_type !== "sow" || form.status !== "draft" || !selectedProject?.id || !milestonesQuery.isSuccess || form.project_milestones_snapshot) return;
-    const snapshot = (milestonesQuery.data || []).map((item: any) => ({ title: item.title, start_date: item.start_date || "", due_date: item.due_date || "", status: item.status || "pending" }));
-    update("project_milestones_snapshot", snapshot);
-  }, [form.doc_type, form.status, selectedProject?.id, milestonesQuery.data, milestonesQuery.isSuccess, form.project_milestones_snapshot]);
   const billed = isProjectBilled(form, selectedProject);
   // Live figures from the ledger: the same numbers the printed paper shows.
   const fin = documentFinancials(
@@ -187,6 +176,14 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
               <p className="whitespace-pre-line">{selectedClient.billing_address}</p>
             )}
             {selectedClient.tax_id && <p>Tax ID: {selectedClient.tax_id}</p>}
+            <div className="mt-2">
+              <TextField
+                label="Client authorised signatory for this document"
+                value={form.client_authorised_signatory_name || selectedClient.authorised_signatory_name || ""}
+                onChange={(value: any) => update("client_authorised_signatory_name", value)}
+                hint="Leave blank if no authorised signatory has been verified. The ordinary contact person is not substituted."
+              />
+            </div>
           </div>
         )}
         <SelectField
