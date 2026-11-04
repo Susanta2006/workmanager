@@ -159,6 +159,11 @@ function PaymentsPage() {
 
   const remove = async () => {
     if (!deleting) return;
+    if (deleting.receipt_id) {
+      toast.error(`This payment has receipt ${deleting.receipt_number}. Delete the receipt first.`);
+      setDeleting(null);
+      return;
+    }
     setBusy(true);
     try {
       await backend.entities.Payment.delete(deleting.id);
@@ -361,6 +366,11 @@ function PaymentsPage() {
                       {project ? (
                         <span className="block text-[10.5px] text-muted-foreground">
                           {project.title}
+                        </span>
+                      ) : null}
+                      {payment.receipt_number ? (
+                        <span className="block text-[10.5px] text-emerald-700">
+                          Receipt {payment.receipt_number}
                         </span>
                       ) : null}
                     </TableCell>
