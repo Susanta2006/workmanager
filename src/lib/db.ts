@@ -203,27 +203,38 @@ async function refreshBalances(records: any[], all: boolean) {
 
   let changedCount = 0;
   for (const doc of documents) {
-    const projectBilledSibling =
-      ["invoice", "receipt"].includes(doc.doc_type) && projectIds.has(doc.project_id);
-    if (!all && !documentIds.has(doc.id) && !projectBilledSibling) continue;
+    const projectRelated = projectIds.has(doc.project_id);
+    const affected = all || documentIds.has(doc.id) || (projectRelated && doc.doc_type === "invoice");
 
-    const fin = documentFinancials(doc, projectsById[doc.project_id], ledger);
-    if (!fin) continue;
+    let patch: Record<string, any> | null = null;
 
-    let patch: Record<string, any>;
-    if (doc.doc_type === "receipt") {
-      // A receipt is a fixed record of one payment. Only its balance is kept current, and only for project receipts.
-      if (!fin.billed) continue;
-      patch = { balance_due: fin.balance };
-    } else {
+    if (doc.doc_type === "quotation") {
+      // A quotation is the fixed project price. Payments never touch it, so any legacy payment figures are cleared.
+      // Its total is never changed here.
+      const legacyPaid = num(doc.amount_paid) !== 0 || ["partially_paid", "paid", "part_paid"].includes(doc.status);
+      if (legacyPaid || num(doc.balance_due) !== 0) {
+        // Nothing is owed or received on a quotation, so both cached figures are zero.
+        patch = {
+          amount_paid: 0,
+          balance_due: 0,
+        };
+        if (["partially_paid", "paid", "part_paid"].includes(doc.status)) patch.status = "accepted";
+      }
+    } else if (doc.doc_type === "invoice" && affected) {
+      const fin = documentFinancials(doc, projectsById[doc.project_id], ledger);
       patch = {
+        total: fin.toBePaid,
         amount_paid: fin.received,
-        balance_due: fin.balance,
+        balance_due: fin.dueNow,
         status: resolveStatus(doc, fin),
       };
-      if (fin.billed) patch.total = fin.total;
+    } else if (doc.doc_type === "receipt" && affected) {
+      const fin = documentFinancials(doc, projectsById[doc.project_id], ledger);
+      if (!fin.billed) continue;
+      patch = { balance_due: fin.left };
     }
 
+    if (!patch) continue;
     const differs = Object.entries(patch).some(([key, value]) =>
       typeof value === "number"
         ? Math.abs(num(doc[key]) - value) > 0.004
