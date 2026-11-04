@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { refreshWorkspaceData } from "@/lib/sync";
 import { toast } from "sonner";
 import { backend } from "@/api/backend";
 import { useAuth } from "@/lib/AuthContext";
 import { fetchAll, logActivity, nextSequence, pushNotification, syncPaymentBalances } from "@/lib/db";
-import { buildLedger, documentFinancials } from "@/lib/doc-finance";
+import { buildLedger, documentFinancials, ledgerNet } from "@/lib/doc-finance";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { inr, num } from "@/lib/format";
 import {
@@ -23,6 +25,10 @@ import {
   TextField,
 } from "@/components/common/FormFields";
 import { clientOptions } from "@/lib/clients";
+
+/** Net money already received on a project, from the ledger (refunds subtracted). */
+const projectReceived = (ledger: any, projectId: string) =>
+  ledgerNet(ledger.payments.filter((p: any) => p._project_id === projectId));
 
 const emptyForm = {
   client_id: "",
@@ -50,6 +56,7 @@ export default function PaymentDialog({
   onSaved,
 }: any) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -89,7 +96,7 @@ export default function PaymentDialog({
     form.client_id
       ? documents.filter((d: any) => d.client_id === form.client_id)
       : documents
-  ).filter((d: any) => ["invoice", "quotation"].includes(d.doc_type));
+  ).filter((d: any) => d.doc_type === "invoice" && d.status !== "cancelled");
   const selectedInvoice = documents.find((d: any) => d.id === form.document_id);
 
   // The ledger without the entry being edited, so its own amount is not counted twice.
@@ -139,6 +146,10 @@ export default function PaymentDialog({
       return;
     }
     // Overpayment guard: a received payment against an invoice may not exceed what is still owed.
+    if (form.status === "received" && selectedInvoice && selectedInvoice.doc_type !== "invoice") {
+      setError("Payments can only be recorded against an invoice. Quotations never take payments.");
+      return;
+    }
     if (form.status === "received" && selectedInvoice?.doc_type === "invoice" && selectedFin) {
       if (Number(form.amount) > selectedFin.dueNow + 0.004) {
         setError(
@@ -150,8 +161,28 @@ export default function PaymentDialog({
       }
     }
 
-    // A payment against a document always belongs to that document's project, so project totals stay correct.
+    // A payment with a receipt is locked: changing its amount or invoice would leave the receipt wrong.
+    if (payment?.receipt_id) {
+      const sameAmount = Math.abs(Number(form.amount) - num(payment.amount)) < 0.005;
+      const sameInvoice = (form.document_id || "") === (payment.document_id || "");
+      if (!sameAmount || !sameInvoice) {
+        setError(`This payment has receipt ${payment.receipt_number}. Its amount and invoice cannot change until the receipt is removed.`);
+        return;
+      }
+    }
+
+    // A payment against an invoice belongs to that invoice's project, so project totals stay correct.
     const linkedProject = selectedInvoice?.project_id || form.project_id || "";
+    const project = projects.find((p: any) => p.id === linkedProject);
+    if (form.status === "received" && project && num(project.project_value) > 0) {
+      const alreadyOnProject = projectReceived(ledger, linkedProject);
+      if (alreadyOnProject + Number(form.amount) > num(project.project_value) + 0.004) {
+        setError(
+          `${project.title} has an agreed price of ${inr(project.project_value)} and ${inr(alreadyOnProject)} is already received. This payment would go over the agreed price.`,
+        );
+        return;
+      }
+    }
     const body = {
       ...form,
       project_id: linkedProject,
@@ -192,6 +223,8 @@ export default function PaymentDialog({
         relatedRecordId: saved.id,
       });
       toast.success(action);
+      // Every screen (payments, invoices, receipts, projects, clients, reports) reads the same ledger, so refresh them all.
+      await refreshWorkspaceData(queryClient);
       onSaved?.(saved);
       onOpenChange(false);
     } catch (err: any) {
@@ -230,12 +263,12 @@ export default function PaymentDialog({
               placeholder="Optional"
             />
             <SelectField
-              label="Against invoice / quotation"
+              label="Against invoice"
               value={form.document_id}
               onChange={chooseInvoice}
               options={invoiceOptions.map((d: any) => ({
                 value: d.id,
-                label: `${d.doc_number} · still to collect ${inr(figuresFor(d)?.dueNow ?? d.balance_due ?? d.total)}`,
+                label: `${d.doc_number} · still to collect ${inr(figuresFor(d)?.dueNow ?? 0)}`,
               }))}
               placeholder="Unlinked payment"
               className="sm:col-span-2"
@@ -286,7 +319,7 @@ export default function PaymentDialog({
           </div>
           {selectedInvoice && selectedFin && (
             <p className="rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-slate-600">
-              {selectedInvoice.doc_number} · total {inr(selectedFin.total)} · already received{" "}
+              {selectedInvoice.doc_number} · amount on this invoice {inr(selectedFin.toBePaid)} · already received{" "}
               {inr(selectedFin.received)} · still to collect here <strong>{inr(selectedFin.dueNow)}</strong>
               {num(form.amount) > 0 && form.status === "received" && (
                 <>
