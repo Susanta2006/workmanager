@@ -93,7 +93,7 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
               {project?.project_code && <p>Ref: {project.project_code}</p>}
               {project?.start_date && <p>Start: {fmtDate(project.start_date)}</p>}
               {project?.deadline && <p>Deadline: {fmtDate(project.deadline)}</p>}
-              {billed && <p>Agreed project value: {inr(fin.total)}</p>}
+              {billed && <p>Agreed project value: {inr(fin.actual)}</p>}
             </div>
           </div>
         )}
@@ -157,43 +157,49 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
                     </tr>
                     <tr>
                       <td className="py-1 text-slate-500">Total amount (actual price)</td>
-                      <td className="py-1 text-right tabular-nums text-slate-800">{inr(fin.total)}</td>
+                      <td className="py-1 text-right tabular-nums text-slate-800">{inr(fin.actual)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-slate-500">Already paid before this invoice</td>
+                      <td className="py-1 text-right tabular-nums text-slate-800">{inr(fin.paidBefore)}</td>
                     </tr>
                     <tr className="border-t border-slate-300">
                       <td className="py-2 font-heading text-[11px] font-bold text-slate-900">
                         Amount left to pay
                       </td>
                       <td
-                        className={`py-2 text-right font-heading text-[11px] font-bold tabular-nums ${fin.balance > 0 ? "text-amber-700" : "text-emerald-700"}`}
+                        className={`py-2 text-right font-heading text-[11px] font-bold tabular-nums ${fin.left > 0 ? "text-amber-700" : "text-emerald-700"}`}
                       >
-                        {inr(fin.balance)}
+                        {inr(fin.left)}
                       </td>
                     </tr>
                   </>
                 ) : (
                   <>
                     <tr>
-                      <td className="py-1 text-slate-500">Project agreed value</td>
-                      <td className="py-1 text-right tabular-nums text-slate-800">{inr(fin.total)}</td>
+                      <td className="py-1 text-slate-500">Project actual price</td>
+                      <td className="py-1 text-right tabular-nums text-slate-800">{inr(fin.actual)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-slate-500">Paid before this receipt</td>
+                      <td className="py-1 text-right tabular-nums text-slate-800">{inr(fin.paidBefore)}</td>
                     </tr>
                     <tr>
                       <td className="py-1 text-slate-500">Received with this receipt</td>
-                      <td className="py-1 text-right tabular-nums text-slate-800">
-                        {inr(fin.thisAmount ?? doc.total)}
-                      </td>
+                      <td className="py-1 text-right tabular-nums text-slate-800">{inr(fin.thisAmount)}</td>
                     </tr>
                     <tr>
-                      <td className="py-1 text-slate-500">Received to date</td>
+                      <td className="py-1 text-slate-500">Total paid to date</td>
                       <td className="py-1 text-right tabular-nums text-emerald-700">{inr(fin.received)}</td>
                     </tr>
                     <tr className="border-t border-slate-300">
                       <td className="py-2 font-heading text-[11px] font-bold text-slate-900">
-                        Balance left to pay
+                        Amount left to pay
                       </td>
                       <td
-                        className={`py-2 text-right font-heading text-[11px] font-bold tabular-nums ${fin.balance > 0 ? "text-amber-700" : "text-emerald-700"}`}
+                        className={`py-2 text-right font-heading text-[11px] font-bold tabular-nums ${fin.left > 0 ? "text-amber-700" : "text-emerald-700"}`}
                       >
-                        {inr(fin.balance)}
+                        {inr(fin.left)}
                       </td>
                     </tr>
                   </>
@@ -249,6 +255,16 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
               </span>
               <span className="font-heading text-[13px] font-bold tabular-nums text-slate-900">
                 {inr(fin.toBePaid)}
+              </span>
+            </div>
+          )}
+          {billed && !isInvoice && (
+            <div className="avoid-break mt-3 flex w-[58%] items-center justify-between rounded border-2 border-slate-900 px-3 py-2">
+              <span className="font-heading text-[11px] font-bold uppercase tracking-wide text-slate-900">
+                Amount received now
+              </span>
+              <span className="font-heading text-[13px] font-bold tabular-nums text-slate-900">
+                {inr(fin.thisAmount)}
               </span>
             </div>
           )}

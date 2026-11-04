@@ -449,15 +449,16 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
           {billed ? (
             <dl className="mt-3 space-y-1.5 text-[12.5px]">
               <Row label="Sum of line items" value={inr(fin?.toBePaid)} />
-              <Row label="Total amount (actual price)" value={inr(fin?.total)} />
+              <Row label="Total amount (actual price)" value={inr(fin?.actual)} />
+              <Row label="Already paid before this invoice" value={inr(fin?.paidBefore)} />
               <div className="border-t border-border pt-1.5">
-                <Row label="Amount left to pay" value={inr(fin?.balance)} strong />
+                <Row label="Amount left to pay" value={inr(fin?.left)} strong />
               </div>
               <div className="mt-2 rounded-md border-2 border-slate-800 bg-white px-2.5 py-2">
                 <Row label="TOTAL AMOUNT TO BE PAID" value={inr(fin?.toBePaid)} strong />
               </div>
               <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
-                The actual price comes from the project. Payments received are listed under Payments.
+                Still to collect on this invoice: {inr(fin?.dueNow)}. Figures are frozen when the invoice is issued.
               </p>
             </dl>
           ) : (
@@ -472,7 +473,7 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
                 <Row label="Total" value={inr(totals.total)} strong />
               </div>
               <Row label="Amount received" value={inr(fin?.received)} />
-              <Row label="Balance due" value={inr(fin?.balance)} strong />
+              <Row label="Balance due" value={inr(fin?.dueNow)} strong />
             </dl>
           )}
           {!settings.signature_uri && (
