@@ -40,15 +40,21 @@ export const createDocument = createServerFn({ method: "POST" })
     const docType = (PREFIXES as Record<string, any>)[input.doc_type] ? input.doc_type : "quotation";
     const prefix = (PREFIXES as Record<string, any>)[docType];
     const year = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 4);
-    const key = `${prefix}-${year}`;
+    const linkedProject = input.project_id ? await db.entities.Project.get(String(input.project_id)) : null;
+    if (input.project_id && !linkedProject) throw new Error("The selected project could not be found.");
+    const projectSegment = linkedProject?.project_code
+      ? String(linkedProject.project_code).replace(/[^A-Za-z0-9-]/g, "").toUpperCase()
+      : "";
+    const scopePrefix = projectSegment ? `${prefix}-${projectSegment}-${year}` : `${prefix}-${year}`;
+    const key = `${scopePrefix}:${docType}`;
 
     const [counter, existing] = await Promise.all([
       db.entities.DocCounter.filter({ key })
         .then((rows) => asRows(rows)[0] || null)
         .catch(() => null),
-      db.entities.Document.filter({ doc_type: docType }, { limit: 500 }),
+      db.entities.Document.filter({ doc_type: docType }, { limit: 1000 }),
     ]);
-    const pattern = new RegExp(`^${prefix}-${year}-(\\d+)$`);
+    const pattern = new RegExp(`^${scopePrefix}-(\\d+)$`);
     let highest = Number(counter?.value || 0);
     asRows(existing).forEach((row: any) => {
       const found = pattern.exec(row.doc_number || "");
@@ -57,7 +63,7 @@ export const createDocument = createServerFn({ method: "POST" })
 
     for (let attempt = 1; attempt <= 10; attempt += 1) {
       const value = highest + attempt;
-      const docNumber = `${prefix}-${year}-${String(value).padStart(4, "0")}`;
+      const docNumber = `${scopePrefix}-${String(value).padStart(4, "0")}`;
       const clash = asRows(await db.entities.Document.filter({ doc_number: docNumber }, { limit: 1 }));
       if (clash.length) continue;
 

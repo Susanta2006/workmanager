@@ -1,9 +1,11 @@
 import ClientRef from "@/components/common/ClientRef";
 import { inr, fmtDate, amount, num } from "@/lib/format";
 import { computeTotals, docTypeMeta, showsPayment } from "@/lib/doc-types";
-import { AGREEMENT_TYPES, templateBodyFor } from "@/lib/doc-templates";
+import { AGREEMENT_TYPES, renderLegalBody, templateBodyFor } from "@/lib/doc-templates";
 import { EMPTY_LEDGER, documentFinancials } from "@/lib/doc-finance";
 import PrivateImage from "@/components/common/PrivateImage";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAll } from "@/lib/db";
 
 export default function DocumentPaper({ doc, client, project, settings, ledger = EMPTY_LEDGER }: any) {
   const meta = docTypeMeta(doc.doc_type);
@@ -26,7 +28,13 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
   const showItems = showPayment && items.length > 0;
   const clientName = client?.name || doc.client_name || "—";
   const projectName = doc.project_name || project?.title || "";
-  const body = String(doc.body || "").trim() || templateBodyFor(doc.doc_type);
+  const body = renderLegalBody(String(doc.body || "").trim() || templateBodyFor(doc.doc_type), settings);
+  const { data: projectMilestones = [] } = useQuery({
+    queryKey: ["document-project-milestones", project?.id, doc.doc_type],
+    queryFn: () => fetchAll("Milestone", { project_id: project.id }),
+    enabled: doc.doc_type === "sow" && Boolean(project?.id) && !Array.isArray(doc.project_milestones_snapshot),
+    staleTime: 30_000,
+  });
 
   return (
     <div className="doc-paper mx-auto" data-print-area>
@@ -61,6 +69,8 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
             {doc.valid_until && <p>Valid until: {fmtDate(doc.valid_until)}</p>}
             {settings.udyam_number && <p>Registration No.: {settings.udyam_number}</p>}
             {settings.gstin && <p>GSTIN: {settings.gstin}</p>}
+            {isAgreement && <p>Governing law: {settings.governing_law || "Laws of India"}</p>}
+            {isAgreement && settings.jurisdiction_city && <p>Agreed court location (subject to legal competence): {[settings.jurisdiction_city, settings.jurisdiction_state, settings.jurisdiction_country].filter(Boolean).join(", ")}</p>}
           </div>
         </div>
       </div>
@@ -106,12 +116,23 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
       <div
         className={
           isAgreement
-            ? "mt-3 whitespace-pre-line text-[10.5px] leading-[1.75] text-slate-700"
-            : "mt-3 whitespace-pre-line text-[9.5px] leading-relaxed text-slate-600"
+            ? "legal-body mt-3 whitespace-pre-line text-[10.5px] leading-[1.75] text-slate-700"
+            : "legal-body mt-3 whitespace-pre-line text-[9.5px] leading-relaxed text-slate-600"
         }
       >
         {body}
       </div>
+
+      {doc.doc_type === "sow" && (doc.project_milestones_snapshot?.length || projectMilestones.length) > 0 && (
+        <section className="mt-5">
+          <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-700">Project phases &amp; milestone schedule</h3>
+          <table className="text-[9.5px]">
+            <thead><tr className="border-y border-slate-200 bg-slate-50 text-left text-slate-500"><th className="px-2 py-2">Phase / milestone</th><th className="px-2 py-2">Timeline</th><th className="px-2 py-2">Status at issue</th></tr></thead>
+            <tbody>{(doc.project_milestones_snapshot || projectMilestones).map((milestone: any, index: number) => <tr key={milestone.id} className="border-b border-slate-100"><td className="px-2 py-2">{index + 1}. {milestone.title}</td><td className="px-2 py-2">{milestone.start_date || milestone.due_date ? `${milestone.start_date ? fmtDate(milestone.start_date) : "TBD"} – ${milestone.due_date ? fmtDate(milestone.due_date) : "TBD"}` : "To be agreed"}</td><td className="px-2 py-2 capitalize">{milestone.status || "pending"}</td></tr>)}</tbody>
+          </table>
+          <p className="mt-1 text-[8.5px] text-slate-500">This schedule is captured from the linked project when the SOW is prepared. Subsequent agreed changes should be recorded through a revised SOW.</p>
+        </section>
+      )}
 
       {showItems && (
         <table className="mt-4 text-[10px]">
@@ -311,32 +332,35 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
       <div className="avoid-break mt-10 pb-2">
         <div className="flex items-end justify-between gap-8">
           {isAgreement ? (
-            <div className="w-[200px] text-[9.5px] text-slate-600">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Accepted by client
-              </p>
-              <div className="flex h-[60px] items-end border-b border-slate-400" />
-              <p className="mt-1">Client signature</p>
+            <div className="w-[46%] text-[9.5px] leading-relaxed text-slate-600">
+              <p className="font-semibold uppercase tracking-[0.12em] text-slate-700">For the Client</p>
+              <p className="mt-1">Legal name: {clientName || "________________________________"}</p>
+              <div className="mt-8 border-b border-slate-500" />
+              <p className="mt-1">Signature of authorised signatory</p>
+              <p className="mt-2">Name: ________________________________</p>
+              <p>Designation: ___________________________</p>
+              <p>Date: _________________________________</p>
+              <p>Company seal (if applicable)</p>
             </div>
           ) : (
             <div className="text-[9px] leading-relaxed text-slate-400">
               <p>{settings.default_footer}</p>
-              <p>
-                {doc.doc_number} · {settings.company_name}
-              </p>
+              <p>{doc.doc_number} · {settings.company_name}</p>
             </div>
           )}
 
-          <div className="w-[200px] text-right text-[9.5px] text-slate-600">
-            <p className="text-slate-500">For {settings.company_name}</p>
-            <div className="flex h-[60px] items-end justify-end border-b border-slate-400">
+          <div className={`text-[9.5px] leading-relaxed text-slate-600 ${isAgreement ? "w-[46%]" : "w-[200px] text-right"}`}>
+            <p className={`font-semibold uppercase tracking-[0.12em] text-slate-700 ${isAgreement ? "" : "normal-case"}`}>For {settings.company_name}</p>
+            <div className={`mt-1 flex h-[60px] items-end border-b border-slate-500 ${isAgreement ? "justify-start" : "justify-end"}`}>
               <PrivateImage
                 fileUri={settings.signature_uri}
                 alt="Authorised signature"
                 className="max-h-[58px] w-auto object-contain"
               />
             </div>
-            <p className="mt-1">{settings.signature_name || "Authorised signatory"}</p>
+            <p className="mt-1">Signature of authorised signatory</p>
+            <p>Name: {settings.signature_name || "____________________________"}</p>
+            {isAgreement && <><p>Designation: ___________________________</p><p>Date: _________________________________</p><p>Company seal (if applicable)</p></>}
           </div>
         </div>
       </div>

@@ -156,7 +156,7 @@ function makeEntity(client: any, name: string, organizationId?: string | null) {
 
     delete: async (id: string) => {
       if (isProfile) throw new Error("Accounts are removed through account deletion, not by the app.");
-      if (name === "ActivityLog") throw new Error("Activity logs are retained for audit history.");
+      if (name === "ActivityLog") throw new Error("Activity logs are cleared automatically by the monthly retention job.");
       if (name === "Notification") {
         const { error } = await client.from("records").delete().eq("id", id).eq("entity", name);
         if (error) throw error;

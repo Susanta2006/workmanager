@@ -261,3 +261,22 @@
     page-break-inside: avoid;
   }
 }
+
+
+/* Legal text must wrap and flow across PDF pages; never clip long identifiers or clauses. */
+.doc-paper,
+.doc-paper * {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.doc-paper p,
+.doc-paper li {
+  orphans: 3;
+  widows: 3;
+}
+.doc-paper .legal-body {
+  white-space: pre-wrap;
+  overflow: visible;
+  break-inside: auto;
+  page-break-inside: auto;
+}

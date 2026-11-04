@@ -1,214 +1,89 @@
 /**
- * Legal / business wording used when a document has no body of its own.
- * Every template is a starting point written in plain language — it is not legal advice
- * and should be reviewed before it is signed.
+ * Reusable India-oriented commercial document templates for software/IT services.
+ * These are drafting templates, not a substitute for transaction-specific legal review.
+ * Do not describe a document as “stamp-free”: stamp duty and registration depend on
+ * the instrument, execution facts and applicable State amendments/rules.
  */
-export const DOC_TEMPLATES = {
-  quotation: {
-    body: `This quotation sets out the scope, deliverables and price for the work described below. It is valid until the date shown above.
-The quotation covers the deliverables listed on this document only. Any additional page, feature, integration or revision outside that scope is quoted separately in writing before it is started.
-Prices are exclusive of third-party costs such as domain registration, hosting, paid APIs and stock assets unless those are listed as line items.
-Acceptance of this quotation may be given in writing (email is sufficient) and is taken as agreement to the payment terms below.`,
-  },
-  invoice: {
-    body: `This invoice is raised for the work and deliverables listed below, in accordance with the agreed quotation or scope of work.
-Please pay the total amount to be paid shown above, and quote the invoice number in the payment reference. Any amount left to pay is due later, as agreed in the project schedule.
-Third-party costs (domain, hosting, paid APIs) are billed at actuals unless they appear as fixed line items.
-Late payment may pause delivery or support until the outstanding balance is settled.`,
-  },
-  receipt: {
-    body: `Received with thanks the amount shown below against the document referenced in this receipt.
-This receipt confirms money actually received and does not by itself settle any other invoice or outstanding balance.`,
-  },
-  agreement: {
-    body: `1. PARTIES
-This agreement is made between the service provider named above ("Provider") and the client named above ("Client").
 
-2. SCOPE OF WORK
-The Provider will deliver the services described in this agreement and the accompanying proposal or statement of work. Anything not described there is outside scope.
+const indiaCommercialTerms = `
+GENERAL CONTRACT FRAMEWORK
 
-3. DELIVERABLES AND TIMELINE
-Deliverables and milestones are as agreed at project kick-off. Timelines assume timely feedback, content and approvals from the Client.
+1. PARTIES, AUTHORITY AND EFFECTIVE DATE
+This document is entered into by the service provider identified in the Provider details on this document (the “Provider”) and the customer identified in the Client details (the “Client”). Each person signing represents that they are legally competent and, where signing for an entity, duly authorised to bind that entity. This document takes effect on the date of the last signature below (the “Effective Date”), unless a different effective date is expressly stated.
 
-4. PAYMENT
-50% of the agreed fee is payable before work begins and the remaining 50% on completion, before final handover. Invoices are payable within 7 days of issue unless agreed otherwise in writing.
+2. CONTRACT DOCUMENTS AND ORDER OF PRECEDENCE
+The documents governing this engagement are this Agreement, the accepted Statement of Work (“SOW”), the accepted quotation, and any change order signed or expressly accepted by both parties. If terms conflict, the following order applies unless the parties expressly agree otherwise: (a) a later signed change order, but only for the changed subject; (b) the SOW; (c) this Agreement; and (d) the accepted quotation. A purchase order is for administrative convenience only and does not amend these terms unless expressly accepted in writing by the Provider.
 
-5. CLIENT RESPONSIBILITIES
-The Client will provide content, access, approvals and a single point of contact within a reasonable time. Delays caused by pending inputs extend the timeline accordingly.
+3. SERVICES AND SCOPE CONTROL
+The Provider shall perform only the services and supply only the deliverables expressly described in the accepted SOW or quotation. Features, integrations, content, revisions, support, hosting, licences and other work not expressly included are excluded. The parties shall document additions, removals or material changes through a written change order stating the scope, fee and schedule impact. The Provider is not required to begin changed work before written approval.
 
-6. CHANGE REQUESTS
-Any change to scope, design direction or features is handled through a written change request, quoted separately before work starts.
+4. CLIENT COOPERATION AND DEPENDENCIES
+The Client shall provide accurate requirements, content, materials, lawful instructions, access credentials, approvals and decisions reasonably required for the services. The Client is responsible for ensuring it has rights to materials and data it supplies. The Provider may rely on the Client's instructions and materials. A delay caused by missing inputs, access, feedback or approvals extends affected dates by a reasonable period and may require rescheduling. The Provider shall notify the Client of material dependencies or delays where reasonably practicable.
 
-7. THIRD-PARTY SERVICES
-Domains, hosting, paid APIs and similar services are procured in the Client's name unless agreed otherwise, and are billed at actuals.
+5. PROJECT SCHEDULE, REVIEW AND ACCEPTANCE
+Milestones and target dates are those stated in the SOW. Unless the SOW specifies otherwise, the Client shall review each submitted deliverable and provide one consolidated written response identifying material non-conformities against the agreed acceptance criteria within five (5) business days. The Provider shall use reasonable efforts to correct verified in-scope non-conformities. A deliverable is accepted when the Client confirms acceptance in writing, puts it into productive use (other than solely for evaluation), or does not provide a sufficiently detailed rejection within the agreed review period after a reminder. This acceptance mechanism does not waive latent defects or non-excludable statutory rights.
+
+6. FEES, TAXES AND PAYMENT
+The Client shall pay the fees and instalments stated in the accepted quotation or SOW against the relevant invoices. Unless a different period is stated, invoices are due within seven (7) calendar days of issue. Taxes, including GST where applicable, shall be charged as required by law and shown on a valid tax invoice. The Client shall reimburse pre-approved third-party costs and expenses at the agreed rates or actual cost against reasonable supporting records. The Provider may suspend affected work after giving written notice of an overdue undisputed amount and a reasonable opportunity to cure. The parties shall promptly discuss any disputed invoice in good faith; undisputed portions remain payable.
+
+7. THIRD-PARTY SERVICES AND OPEN-SOURCE MATERIAL
+Third-party platforms, hosting, domains, APIs, payment gateways, software and open-source components are subject to their own terms, availability, fees and licences. Unless the SOW states otherwise, the Client contracts for and pays recurring third-party services directly. The Provider is not responsible for third-party outages, policy changes, price changes or acts outside its reasonable control. The Provider shall not knowingly incorporate third-party material in a manner that materially conflicts with its applicable licence obligations.
 
 8. INTELLECTUAL PROPERTY
-On full payment, ownership of the delivered work transfers to the Client. The Provider retains the right to reuse generic code, know-how and non-confidential components. Third-party assets remain governed by their own licences.
+Each party retains ownership of intellectual property it owned or developed independently before this engagement (“Background IP”). Subject to full payment of all amounts due for the relevant deliverable, the Provider assigns to the Client the Provider-owned rights, if any, in the specifically identified bespoke deliverables created exclusively for the Client under the SOW, excluding Background IP, reusable tools, frameworks, libraries, generic know-how, methods, templates and third-party materials. To the extent any Provider Background IP is embedded in a paid deliverable, the Provider grants the Client a perpetual, worldwide, non-exclusive, royalty-free licence to use, reproduce, maintain and modify that embedded Background IP solely as part of, or as necessary to use, the deliverable. Third-party materials remain subject to their own licences. Until full payment, the Client receives a limited, revocable licence to review deliverables solely for evaluation and acceptance. The parties shall identify any special source-code escrow, exclusivity or third-party assignment requirements expressly in the SOW.
 
 9. CONFIDENTIALITY
-Both parties keep shared business information confidential and use it only to perform this agreement.
+A receiving party shall use the other party's non-public business, technical, financial, security, customer and commercial information (“Confidential Information”) only to perform or evaluate this engagement; protect it using at least reasonable care; and disclose it only to personnel and professional advisers who need to know it and are bound by confidentiality obligations. Confidential Information excludes information that the receiving party can demonstrate was public without breach, already lawfully known, independently developed without use of the information, or lawfully received from a third party without confidentiality restriction. A legally compelled disclosure is permitted to the minimum extent required, with prior notice where lawful. These obligations continue for three (3) years after termination; trade secrets remain protected for so long as they qualify as trade secrets under applicable law.
 
-10. DATA PROTECTION
-Personal data shared for this engagement is used only to deliver the agreed services and is not sold or shared for marketing.
+10. PERSONAL DATA AND SECURITY
+Each party shall comply with data-protection and information-security laws applicable to it. The Client shall ensure it has a lawful basis and all required notices, consents and permissions for personal data it provides or instructs the Provider to process. The Provider shall process such data only for the documented service purposes and instructions, apply reasonable technical and organisational safeguards, restrict access to personnel who need it, and notify the Client without undue delay after becoming aware of a personal-data breach affecting data processed for the engagement. If the nature of processing requires it, the parties shall execute a separate data-processing addendum before that processing begins. Neither party shall place sensitive or regulated data into a third-party system without first confirming the relevant safeguards and authorisations.
 
-11. SUPPORT AND MAINTENANCE
-Post-handover support is not included unless a separate maintenance agreement is signed.
+11. WARRANTIES AND DISCLAIMERS
+Each party warrants that it has authority to enter into this document. The Provider shall perform services with reasonable skill and care consistent with generally accepted professional practices. Unless expressly stated in the SOW, the Provider does not warrant uninterrupted or error-free operation, compatibility with unspecified systems, specific commercial outcomes, search rankings, revenue, or that third-party services will remain available. The Client is responsible for reviewing and approving business content, legal notices, regulatory claims and production releases. Nothing in this document excludes a warranty or right that cannot lawfully be excluded.
 
-12. TERMINATION
-Either party may terminate in writing. Work completed up to that date is payable, and delivered materials are handed over once dues are settled.
+12. COMPLIMENTARY POST-DEPLOYMENT MAINTENANCE
+Unless the SOW expressly states a different arrangement, the Provider includes one (1) month of complimentary post-deployment maintenance, commencing on the later of (a) the date the agreed deliverable is deployed to the Client's production environment, or (b) the date of written handover. It covers reasonable diagnosis and correction of reproducible defects that cause the delivered in-scope functionality to materially fail to conform to the accepted SOW. It does not include new features, enhancements, redesign, content entry, third-party outages or fees, hosting/domain renewals, security incidents caused by the Client or third parties, or issues resulting from changes not made or authorised by the Provider. The Client shall report defects with reasonable detail and reproduction steps. No 24/7 availability or fixed response/resolution time is promised unless expressly agreed in writing. Ongoing maintenance after this period requires a separate written agreement.
 
-13. LIABILITY
-The Provider's total liability under this agreement is limited to the fees paid for this specific engagement, to the extent permitted by law.
+13. TERM, SUSPENSION AND TERMINATION
+This document continues until the services are completed or it is terminated under this clause. Either party may terminate for a material breach if the breach is not remedied within fifteen (15) days after written notice describing it. Either party may terminate immediately where the other party becomes insolvent or continued performance would be unlawful. The Provider may suspend affected services for overdue undisputed amounts after written notice and a reasonable cure period. On termination, the Client shall pay fees for services performed, accepted milestones, approved expenses and non-cancellable commitments incurred up to the effective termination date. Subject to payment of undisputed outstanding amounts, the Provider shall provide the paid-for deliverables completed up to termination. Clauses intended by their nature to survive shall survive.
 
-14. GOVERNING LAW AND DISPUTES
-This agreement is governed by the laws of India. The parties will first attempt good-faith resolution, and the courts at the Provider's place of business have jurisdiction.
+14. LIMITATION OF LIABILITY
+To the maximum extent permitted by applicable law, neither party shall be liable to the other for indirect, incidental, special, exemplary or consequential loss, or loss of profits, revenue, anticipated savings, goodwill or data, arising out of this engagement. Each party's aggregate liability arising out of or in connection with this engagement shall not exceed the total fees paid or payable under the relevant SOW in the twelve (12) months preceding the event giving rise to the claim. These limitations do not apply to liability that cannot lawfully be limited, fraud or wilful misconduct, or a party's deliberate breach of confidentiality or infringement/misappropriation of the other party's intellectual property. The parties should expressly negotiate any different cap or carve-outs in the SOW.
 
-15. ACCEPTANCE
-Work begins, or the Client signs below, only after the terms above are accepted.`,
-  },
-  nda: {
-    body: `1. PURPOSE
-The parties wish to explore a possible engagement and, for that purpose, may share confidential information with each other.
+15. INDEMNITY
+Each party (the “Indemnifying Party”) shall defend the other against a third-party claim to the extent directly arising from the Indemnifying Party's infringement of that third party's intellectual property rights, its violation of applicable law, or its gross negligence or wilful misconduct, and shall pay damages finally awarded or settlements it approves in writing. The party seeking indemnity shall promptly notify the Indemnifying Party, provide reasonable cooperation at the Indemnifying Party's cost, and allow it to control the defence and settlement, provided no settlement may impose an admission, payment or continuing obligation on the indemnified party without its consent. The indemnity is subject to the liability limitations above except to the extent prohibited by law or expressly stated otherwise.
 
-2. CONFIDENTIAL INFORMATION
-Confidential information means non-public business, technical, financial, product, customer and commercial information disclosed in writing, verbally or electronically, that a reasonable person would treat as confidential.
+16. FORCE MAJEURE
+Neither party is liable for delay or failure caused by events beyond its reasonable control, including natural disasters, war, civil unrest, epidemic, governmental action, utility or internet failures, or widespread third-party platform outages, provided it gives notice where practicable and takes reasonable steps to mitigate. If the event continues for more than thirty (30) days, either party may terminate the affected services by written notice, with payment due for work performed and approved non-cancellable commitments.
 
-3. OBLIGATIONS
-The receiving party will (a) use the information only for the purpose above, (b) protect it with at least reasonable care, and (c) disclose it only to team members who need it and are bound by similar obligations.
+17. DISPUTE RESOLUTION, GOVERNING LAW AND COURTS
+The parties shall first attempt in good faith to resolve a dispute through discussions between authorised representatives within thirty (30) days after written notice of the dispute. This document is governed by {{GOVERNING_LAW}}, excluding conflict-of-law principles. Subject to mandatory statutory forums and the requirement that a court have territorial and subject-matter jurisdiction, {{JURISDICTION}} shall have exclusive jurisdiction where legally competent. If no court location is specified, disputes shall be brought before a court otherwise competent under applicable law; this document does not create jurisdiction in a court that would not otherwise have it. Either party may seek urgent interim relief from a court of competent jurisdiction.
 
-4. EXCLUSIONS
-Confidentiality does not apply to information that is already public, was lawfully known before disclosure, is independently developed without use of the disclosed information, or is required to be disclosed by law (with prompt notice where lawful).
+18. NOTICES
+Notices shall be sent to the postal or email addresses stated for the parties in this document, or to replacement details notified in writing. A notice by email is effective when no delivery failure is received and the sender retains a copy of the message; a notice requiring formal service under law must also be served in the legally prescribed manner.
 
-5. TERM
-These obligations apply from the date of disclosure and continue for three years after the engagement ends, or longer where required by law.
+19. GENERAL
+This document and its incorporated schedules constitute the entire agreement on its subject and supersede prior proposals or discussions to that extent. Any amendment or waiver must be recorded in writing and accepted by authorised representatives of both parties. If a provision is held invalid, it shall be modified to the minimum extent necessary and the remainder shall continue. Neither party may assign this document without the other's prior written consent, except to a successor in a merger or sale of substantially all relevant assets that assumes the obligations. The parties are independent contractors; nothing creates a partnership, agency, employment or joint venture. A person who is not a party has no right to enforce this document except where applicable law provides otherwise.
 
-6. RETURN OF MATERIALS
-On written request, the receiving party will return or securely destroy the confidential materials it holds, except copies required by law or internal backup policy.
+20. EXECUTION AND COUNTERPARTS
+The parties may execute this document in counterparts. Electronic records and electronic signatures may be used to the extent recognised by applicable law and subject to any instrument-specific execution, stamping, attestation or registration requirement. The parties shall ensure that applicable stamp duty, if any, is paid in the legally prescribed manner and within the prescribed time. This clause does not state that this instrument is exempt from stamp duty or registration.
 
-7. NO LICENCE
-No licence, ownership or intellectual property right is granted by disclosure.
+21. SIGNATURES AND ACKNOWLEDGEMENT
+Each signatory confirms that they have read this document, understand its terms and are authorised to sign for the party identified below. The parties should retain the complete executed copy, including schedules, together with the associated approval and payment records.`;
 
-8. REMEDIES
-The parties acknowledge that breach may cause harm not fully remediable in damages, and that injunctive relief may be sought.
-
-9. GOVERNING LAW
-This agreement is governed by the laws of India.`,
-  },
-  sow: {
-    body: `1. ENGAGEMENT
-This statement of work describes the services, deliverables, schedule and commercials for the engagement named above. It forms part of the governing agreement between the parties.
-
-2. SCOPE
-The scope is limited to the deliverables listed in this document. Anything not explicitly listed is out of scope and requires a written change request.
-
-3. DELIVERABLES AND MILESTONES
-Each milestone is delivered for review. Review rounds are limited to two per milestone unless agreed otherwise; further rounds are quoted separately.
-
-4. SCHEDULE
-Dates assume timely inputs, feedback and approvals from the Client. Dependencies and delays are recorded and the schedule is adjusted accordingly.
-
-5. ACCEPTANCE
-A deliverable is accepted when the Client confirms it in writing, or when 7 days pass without substantive written feedback after delivery.
-
-6. FEES AND PAYMENT
-Fees, taxes and payment milestones are as set out in this document. Invoices are payable within 7 days of issue.
-
-7. OUT-OF-SCOPE WORK
-Additional work is estimated, approved in writing and billed at the agreed rate before it begins.
-
-8. ASSUMPTIONS AND EXCLUSIONS
-Third-party subscriptions, domains, hosting, content writing, photography and paid assets are excluded unless listed.
-
-9. GOVERNING TERMS
-The terms of the governing agreement apply to this statement of work.`,
-  },
-  proposal: {
-    body: `1. UNDERSTANDING OF THE BRIEF
-This proposal responds to the requirement described by the Client and summarises the approach, scope and commercials proposed by the Provider.
-
-2. PROPOSED APPROACH
-Work is delivered in phases: discovery and planning, design, build, review and launch. Each phase ends with a review checkpoint for written feedback.
-
-3. DELIVERABLES
-The deliverables listed in this document are included. Content, copy, imagery and product data are provided by the Client unless stated otherwise.
-
-4. TIMELINE
-The indicative timeline starts on the date the advance is received and inputs are available. Delays in inputs move the schedule.
-
-5. COMMERCIALS
-Fees, taxes, payment milestones and validity are as shown in this proposal. Third-party costs are billed at actuals.
-
-6. EXCLUSIONS
-Ongoing maintenance, content creation, paid advertising, photography and third-party licences are excluded unless listed.
-
-7. NEXT STEPS
-Approval may be given in writing (email is sufficient). On approval, the Provider issues an agreement and an advance invoice to schedule the work.`,
-  },
-  change_request: {
-    body: `1. REQUESTED CHANGE
-This document records a change requested by the Client to the scope, design, features or timeline of the project named above.
-
-2. DETAILS OF CHANGE
-The change is described in this document. Work on it begins only after written approval by the Client.
-
-3. IMPACT ON SCOPE AND TIMELINE
-The change may add or remove deliverables and may move the agreed launch date. The revised timeline takes effect from the approval date.
-
-4. COST IMPACT
-Any additional fee is shown in this document. If it is not shown, the change is estimated and confirmed in writing before it starts.
-
-5. UNAFFECTED TERMS
-All other terms of the original agreement and statement of work remain unchanged.`,
-  },
-  certificate: {
-    body: `This is to certify that the work and deliverables described in this document have been completed and handed over to the Client named above, in accordance with the agreed scope.
-
-The Client has had the opportunity to review the deliverables. Any items noted as pending are recorded in this document and are excluded from this certification.
-
-This certificate is issued on the date shown above and confirms completion of the engagement described, subject to settlement of any outstanding invoices.`,
-  },
-  handover: {
-    body: `1. HANDOVER SUMMARY
-This document records the handover of the completed work, credentials, assets and documentation from the Provider to the Client named above.
-
-2. WHAT IS INCLUDED
-Deliverables, source files (where agreed), domain and hosting access, third-party account ownership and usage notes are transferred as listed in this document.
-
-3. CLIENT RESPONSIBILITIES
-The Client is responsible for changing shared credentials after handover, keeping renewals active, and maintaining backups once responsibility transfers.
-
-4. WHAT IS NOT INCLUDED
-Ongoing maintenance, monitoring, content updates and new features are not included and are covered by a separate agreement.
-
-5. CONFIRMATION
-Signature of this document confirms receipt of the handover materials listed above.`,
-  },
-  maintenance: {
-    body: `1. SERVICE COVERAGE
-The Provider will provide maintenance and support for the solution described in this document, covering agreed updates, minor fixes, monitoring and reasonable assistance.
-
-2. RESPONSE AND RESOLUTION
-Reported issues are acknowledged within one business day and prioritised by severity. Critical outages are addressed first; cosmetic issues are scheduled in the next update window.
-
-3. WHAT IS NOT COVERED
-New features, redesigns, third-party price changes, content creation and issues caused by unauthorised changes are out of scope and quoted separately.
-
-4. CLIENT RESPONSIBILITIES
-Timely reporting, reasonable access and not modifying the delivered system without informing the Provider.
-
-5. FEES AND RENEWAL
-Fees are payable in advance for the agreed term. Renewal is confirmed in writing before the term ends.
-
-6. TERMINATION
-Either party may end this agreement with 30 days' written notice; fees for the notice period remain payable.`,
-  },
-  custom: {
-    body: `This document records the understanding between the parties named above in relation to the matter described in this document.
-
-Both parties confirm that the details set out here are accurate and complete to the best of their knowledge, and that any changes will be made in writing and acknowledged by both parties.
-
-Nothing in this document creates a partnership, joint venture or employment relationship between the parties, and neither party may bind the other without prior written consent.`,
-  },
+export const DOC_TEMPLATES = {
+  quotation: { body: `QUOTATION AND COMMERCIAL OFFER\n\nThis quotation is an offer by the Provider to supply only the items and services described in the line items and scope stated in this document. It remains open for acceptance until the validity date shown on the document; after that date the Provider may revise price, availability or schedule.\n\nSCOPE AND ASSUMPTIONS\nThe quoted price covers only the listed deliverables, quantities and included revision rounds. Additional functionality, integrations, pages, content, migration, training or revisions require a written change order. Client-supplied content, approvals and access are assumed to be accurate and timely.\n\nPRICE, TAX AND THIRD-PARTY COSTS\nAmounts are in Indian Rupees unless stated otherwise. Taxes are charged as applicable and shall be shown on the tax invoice. Hosting, domains, paid APIs, licences, stock assets, payment-gateway charges and other third-party costs are excluded unless separately listed.\n\nACCEPTANCE\nThe Client may accept this quotation by signing below or by an unequivocal written acceptance from an authorised representative that identifies this quotation number. Upon acceptance, the scope and commercial terms become binding, subject to any separate agreement or SOW expressly referenced. Work scheduling may be conditional on receipt of the stated advance and required inputs.\n\nThis quotation is not an invoice or proof of payment. The Provider will issue an invoice for amounts becoming due.` },
+  invoice: { body: `TAX / COMMERCIAL INVOICE\n\nThis invoice requests payment for the goods or services described in the line items, as supplied or agreed under the referenced quotation, agreement or SOW. The Client should quote the invoice number when making payment.\n\nPAYMENT\nThe amount due, applicable taxes, credits and prior payments are reflected in the totals above. Payment is due on the due date shown, subject to the governing contract. Please raise any invoice query promptly and identify the disputed line item; undisputed amounts remain payable.\n\nTAX AND RECORDS\nGST and other taxes are charged only where applicable and in accordance with the Provider's tax registration and applicable law. This document must not be treated as a GST tax invoice unless the statutory particulars required for a tax invoice are present. A payment receipt will be issued for amounts actually received.` },
+  receipt: { body: `PAYMENT RECEIPT\n\nThe Provider acknowledges receipt of the amount shown as “Received” above from the Client on the date recorded in this receipt, against the invoice or transaction reference identified in this document.\n\nThis receipt evidences only the amount actually received. It does not waive, settle or discharge any other outstanding amount, claim or obligation unless the relevant balance is expressly shown as zero and the parties have separately agreed that the payment constitutes full and final settlement.` },
+  agreement: { body: `MASTER SERVICES AGREEMENT\n\n${indiaCommercialTerms}` },
+  nda: { body: `MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT\n\n1. PARTIES AND PURPOSE\nThe Provider and Client identified on this document (each a “Party”, together the “Parties”) may disclose Confidential Information to evaluate, negotiate or perform the project or business relationship identified in this document (the “Purpose”). This Agreement applies to disclosures made before or after its Effective Date in connection with the Purpose.\n\n2. CONFIDENTIAL INFORMATION\n“Confidential Information” means non-public commercial, financial, operational, customer, personal, product, source-code, architecture, security, research or technical information disclosed in any form and marked confidential or which reasonably should be understood to be confidential. The disclosing Party should identify highly sensitive oral disclosures as confidential within a reasonable time where practicable.\n\n3. RECIPIENT OBLIGATIONS\nThe receiving Party shall use Confidential Information solely for the Purpose; protect it using at least reasonable care; not disclose it except to its employees, professional advisers and contractors who need to know it for the Purpose and are bound by confidentiality obligations; and remain responsible for their compliance. No reverse engineering, copying or security testing is permitted except as expressly authorised in writing or required by law.\n\n4. EXCLUSIONS AND COMPELLED DISCLOSURE\nConfidential Information excludes information demonstrably public without breach, already lawfully known without restriction, independently developed without use of the disclosed information, or lawfully obtained from a third party without a duty of confidence. If disclosure is legally compelled, the receiving Party may disclose only the legally required portion and, where lawful and practicable, shall give prompt notice and cooperate with protective measures.\n\n5. SECURITY INCIDENTS\nThe receiving Party shall notify the disclosing Party without undue delay after becoming aware of unauthorised access, use or disclosure of its Confidential Information and shall reasonably cooperate to contain and remediate the incident.\n\n6. OWNERSHIP; NO LICENCE\nAll Confidential Information remains the property of the disclosing Party. No licence, assignment or other intellectual-property right is granted by disclosure, except the limited right to use the information for the Purpose.\n\n7. RETURN OR DESTRUCTION\nOn written request or termination of the Purpose, the receiving Party shall return or securely destroy Confidential Information within a reasonable period, except one archival copy retained solely for legal compliance and routine inaccessible backups, which remain protected and are deleted under ordinary retention cycles.\n\n8. TERM AND SURVIVAL\nThis Agreement begins on the Effective Date. Confidentiality obligations continue for five (5) years after the last disclosure; trade secrets remain protected for so long as they qualify as trade secrets under applicable law.\n\n9. REMEDIES\nThe Parties acknowledge that unauthorised use or disclosure may cause harm for which monetary damages may be inadequate. The disclosing Party may seek interim or equitable relief from a court of competent jurisdiction, in addition to remedies available under law. No remedy is automatic and the court will determine entitlement under applicable law.\n\n10. NO OBLIGATION TO PROCEED; NO WARRANTY\nNeither Party is obliged to enter into a further transaction. Confidential Information is provided for the Purpose; except as expressly agreed in a definitive contract, neither Party gives a warranty as to its completeness or accuracy. This clause does not exclude liability for fraud or any liability that cannot lawfully be excluded.\n\n11. GOVERNING LAW AND DISPUTES\nThis Agreement is governed by the laws of India. The Parties shall first attempt good-faith resolution. Subject to mandatory statutory forums and court competence, {{JURISDICTION}} shall have exclusive jurisdiction where legally competent. If no venue is specified, disputes shall be brought before a court otherwise competent under applicable law.\n\n12. GENERAL AND EXECUTION\nThis Agreement is the entire agreement on confidentiality for the Purpose. Amendments must be in writing and accepted by both Parties. Electronic records and signatures may be used where legally recognised, subject to applicable stamp-duty, attestation and registration requirements. Each signatory confirms authority to bind the relevant Party.` },
+  sow: { body: `STATEMENT OF WORK (SOW)\n\n1. PURPOSE AND CONTRACTUAL STATUS\nThis SOW describes the project-specific services, deliverables, milestones, assumptions, acceptance criteria, fees and schedule. It is incorporated into and governed by the Master Services Agreement or Service Agreement identified by reference in this document. If no master agreement is identified, this SOW together with the accepted quotation and this SOW's terms forms the agreement for the described work.\n\n2. PROJECT SCOPE\nOnly the deliverables expressly listed in this SOW are included. Features, integrations, pages, revisions, content, migration, training, hosting, licences and support not expressly listed are excluded.\n\n3. MILESTONES AND SCHEDULE\nWhere a linked project has milestones at the time this SOW is issued, the milestone schedule displayed in this document is incorporated as the agreed project plan. If no milestones are configured, no milestone schedule is implied; the parties must agree dates and phases in writing before relying on them. Target dates depend on timely Client inputs, approvals and third-party access. A revised schedule should be documented through a written change order or revised SOW.\n\n4. DELIVERABLE REVIEW AND ACCEPTANCE\nThe Client shall review each deliverable against the objective acceptance criteria recorded for that deliverable. Unless a different review period is stated in the project milestone, the Client shall provide one consolidated written response within five (5) business days. The Provider shall correct verified material deviations from the agreed criteria. New preferences or additional functionality are change requests. A deliverable is accepted by written confirmation, productive use, or failure to provide a sufficiently detailed rejection within the agreed review period after a reminder.\n\n5. CLIENT DEPENDENCIES\nThe Client shall provide requirements, content, credentials, access, approvals, test users and decisions by the dates reasonably requested. Delays in these dependencies extend affected milestones and may require re-planning.\n\n6. FEES AND PAYMENT MILESTONES\nFees, taxes, advance payments and milestone-linked instalments are only those expressly stated in the commercial section of this SOW or its accepted quotation. No percentage, fee or payment date is implied if not stated. Invoices are payable according to the agreed payment terms.\n\n7. CHANGE CONTROL\nA change to scope, acceptance criteria, deliverables, integrations or schedule requires a written change order stating the impact on fees and dates. The Provider may decline work outside scope until the change is approved.\n\n8. THIRD-PARTY AND CLIENT-SUPPLIED MATERIALS\nThird-party services and recurring charges are excluded unless itemised. The Client warrants that it has the rights and permissions needed for materials and data it supplies.\n\n9. ONE-MONTH COMPLIMENTARY MAINTENANCE\nUnless expressly varied in writing, one (1) month of complimentary maintenance begins on the later of production deployment or written handover. It is limited to diagnosis and correction of reproducible defects causing material failure of the delivered in-scope functionality. It excludes new features, enhancements, redesign, content changes, third-party outages or charges, hosting/domain renewals, and defects caused by unauthorised or client-side changes. No 24/7 support or fixed resolution time is included unless stated.\n\n10. GOVERNING TERMS\nThe governing agreement's confidentiality, intellectual-property, data-protection, warranty, liability, termination, dispute-resolution and execution terms apply to this SOW. This SOW is governed by the laws of India and, subject to mandatory statutory forums and court competence, the courts specified in the governing agreement.` },
+  proposal: { body: `PROJECT PROPOSAL\n\n1. EXECUTIVE SUMMARY\nThis proposal describes the Provider's proposed approach to the Client's stated requirements. It is an offer for discussion and does not authorise commencement of work unless accepted in writing and any stated preconditions are met.\n\n2. UNDERSTANDING AND APPROACH\nThe Provider will deliver the approach and workstreams expressly described in the scope and line items. The final technical architecture, dependencies and delivery sequence may be refined during discovery, provided material changes to scope, price or schedule are approved in writing.\n\n3. DELIVERABLES AND EXCLUSIONS\nOnly listed deliverables are included. Client content, third-party subscriptions, hosting, domains, paid APIs, advertising, photography, legal review and services not listed are excluded unless itemised.\n\n4. TIMELINE AND CLIENT INPUTS\nIndicative dates depend on timely access, content, feedback and approvals. A binding milestone plan will be recorded in the SOW.\n\n5. FEES AND VALIDITY\nFees, taxes, payment terms and validity are as shown in this proposal. Third-party costs are additional unless expressly included.\n\n6. COMPLIMENTARY MAINTENANCE\nUnless varied in the accepted SOW, one (1) month of complimentary defect maintenance is included from the later of production deployment or written handover, limited to reproducible defects in the delivered in-scope functionality. Enhancements, new features, third-party charges and outages, hosting/domain renewals and unauthorised changes are excluded.\n\n7. ACCEPTANCE AND NEXT STEPS\nThe Client may accept by signing this proposal or by written acceptance from an authorised representative identifying this proposal number. The parties should then execute the relevant service agreement and SOW. No work begins until agreed commencement conditions are satisfied.` },
+  change_request: { body: `PROJECT CHANGE ORDER\n\n1. CHANGE IDENTIFICATION\nThis Change Order relates to the project, SOW and agreement identified above and records a requested addition, removal or modification to the agreed scope.\n\n2. DESCRIPTION AND REASON\nThe change description, affected features and reason for the request must be stated in the project details or attached schedule.\n\n3. IMPACT ASSESSMENT\nThe parties shall identify the impact on deliverables, acceptance criteria, dependencies, fees, taxes, milestones and deployment dates. Any impact not yet quantified must be marked “to be agreed” and must not be treated as approved for implementation.\n\n4. AUTHORISATION\nThe Provider shall not begin the changed work until both Parties' authorised representatives approve this Change Order in writing. Upon approval, it amends the referenced SOW only to the extent expressly described. All unaffected terms remain in force.` },
+  certificate: { body: `COMPLETION AND ACCEPTANCE CERTIFICATE\n\nThis certificate records the status of the deliverables identified in the linked SOW or project record as at the issue date. It is not a substitute for the SOW or a waiver of any rights that cannot lawfully be waived.\n\nThe Client confirms receipt and review of the deliverables specifically listed as completed in this certificate, subject to any exceptions, open defects or pending items expressly recorded here. Acceptance of listed deliverables does not certify third-party services, future availability, security against all threats, regulatory compliance of Client content, or functionality outside the agreed acceptance criteria.\n\nAny outstanding fees remain payable in accordance with the governing agreement. This certificate does not waive claims for latent defects or obligations that expressly survive acceptance.` },
+  handover: { body: `PROJECT HANDOVER RECORD\n\n1. PURPOSE\nThis record identifies the project materials and access items handed over by the Provider to the Client on the date stated above. It should be read with the governing agreement and SOW.\n\n2. HANDOVER INVENTORY\nOnly the files, source code, credentials, documentation, repositories, deployment details and other items expressly listed in this document or its attachment are confirmed as handed over. Items not listed are not represented as transferred.\n\n3. ACCESS AND SECURITY\nThe Client shall verify receipt, change temporary/shared credentials, enable appropriate multi-factor authentication, maintain access controls and keep independent backups. Credentials should be transferred through a secure channel and should not be printed in this document.\n\n4. THIRD-PARTY ACCOUNTS\nOwnership, billing and renewal of domains, hosting, APIs and third-party accounts transfer only where the relevant provider permits and the transfer is expressly listed. Third-party terms continue to apply.\n\n5. MAINTENANCE\nAny one-month complimentary defect-maintenance period is governed by the SOW or service agreement and is not extended by signing this handover record. Ongoing support and enhancements require a separate agreement.\n\n6. ACKNOWLEDGEMENT\nThe Client acknowledges receipt of the listed items, subject to any exceptions recorded here. This acknowledgement does not waive rights that cannot lawfully be waived.` },
+  maintenance: { body: `SOFTWARE MAINTENANCE AND SUPPORT AGREEMENT\n\n1. SERVICES AND SERVICE WINDOW\nThe Provider shall provide only the maintenance services, covered systems, service window and support channels expressly identified in this document or its attached service schedule. No 24/7 monitoring or availability commitment applies unless expressly stated.\n\n2. INCIDENT REPORTING AND PRIORITY\nThe Client shall report issues with affected functionality, time observed, steps to reproduce, screenshots/logs where safe, and business impact. Priority and any response targets are those expressly stated in the service schedule. A response target is not a guaranteed resolution time.\n\n3. INCLUDED MAINTENANCE\nIncluded work may comprise defect diagnosis, compatible dependency updates and minor corrective changes only to the extent listed in the service schedule. New features, redesign, major upgrades, content work, data entry, migrations and new integrations are excluded unless separately approved.\n\n4. EXCLUSIONS\nThe Provider is not responsible for outages or changes in third-party platforms, hosting, domains, APIs, payment gateways or services outside its control; issues caused by unauthorised modifications, unsupported environments, misuse or Client negligence; or costs charged by third parties. Emergency work outside the agreed service window may be separately quoted.\n\n5. CLIENT OBLIGATIONS\nThe Client shall maintain valid third-party subscriptions, provide authorised access, appoint a contact, maintain backups and promptly notify the Provider of material changes to the supported environment.\n\n6. FEES, TERM AND RENEWAL\nFees, billing frequency, service term, renewal and notice periods are only those expressly stated in the commercial section. No automatic renewal applies unless expressly accepted in writing.\n\n7. LIABILITY AND GOVERNING TERMS\nThe service agreement's confidentiality, intellectual-property, data-protection, warranty, liability, termination, dispute-resolution and execution clauses apply. This document is governed by the laws of India and, subject to mandatory statutory forums and court competence, the courts specified in the governing agreement.` },
+  custom: { body: `DOCUMENT PURPOSE AND PARTIES\nThis document records the specific commercial or operational understanding described in its title and details. It binds the parties only to the extent its obligations, scope, consideration (where required), acceptance and authorised execution are sufficiently clear under applicable law.\n\nThe parties should identify the governing agreement, project reference, deliverables, dates, payment obligations, responsibilities and any conditions that apply. Any amendment must be recorded in writing and accepted by authorised representatives. No provision in this document creates a partnership, employment, agency or joint venture unless expressly agreed in a separate signed instrument.` },
 };
 
 export const templateBodyFor = (docType: any) => (DOC_TEMPLATES as Record<string, any>)[docType]?.body || DOC_TEMPLATES.custom.body;
@@ -221,3 +96,12 @@ export const isTemplateBody = (value: any) => {
 };
 
 export const AGREEMENT_TYPES = ["agreement", "nda", "sow", "maintenance", "certificate", "handover", "custom"];
+
+/** Resolve legal placeholders without inventing a territorial court venue. */
+export function renderLegalBody(body: string, settings: any = {}) {
+  const venue = [settings.jurisdiction_city, settings.jurisdiction_state, settings.jurisdiction_country]
+    .filter(Boolean).join(", ");
+  return String(body || "")
+    .replaceAll("{{GOVERNING_LAW}}", String(settings.governing_law || "the laws of India"))
+    .replaceAll("{{JURISDICTION}}", venue || "a court otherwise competent under applicable law");
+}

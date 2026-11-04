@@ -282,6 +282,16 @@ function SettingsPage() {
                 rows={3}
                 className="sm:col-span-2"
               />
+              <div className="sm:col-span-2 rounded-lg border border-border bg-slate-50/70 p-3">
+                <p className="mb-1 text-[12.5px] font-semibold text-slate-800">Governing law &amp; jurisdiction</p>
+                <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">Used in newly generated agreements and SOWs. Enter the agreed court location; do not select a venue merely because it is convenient. Have the clause reviewed for the applicable transaction.</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TextField label="Governing law" value={form.governing_law} onChange={set("governing_law")} />
+                  <TextField label="Jurisdiction city" value={form.jurisdiction_city} onChange={set("jurisdiction_city")} placeholder="e.g. Agartala" />
+                  <TextField label="State / province" value={form.jurisdiction_state} onChange={set("jurisdiction_state")} placeholder="e.g. Tripura" />
+                  <TextField label="Country" value={form.jurisdiction_country} onChange={set("jurisdiction_country")} />
+                </div>
+              </div>
               <TextField
                 label="Registration Number"
                 value={form.udyam_number}

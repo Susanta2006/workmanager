@@ -12,6 +12,7 @@ import {
   Flag,
   Pencil,
   Plus,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -59,7 +60,7 @@ function ProjectDetailPage() {
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
-  const [milestone, setMilestone] = useState({ title: "", due_date: "" });
+  const [milestone, setMilestone] = useState({ title: "", start_date: "", due_date: "" });
   const [member, setMember] = useState("");
   const { canDelete, canAssignWork } = usePermissions();
 
@@ -127,6 +128,7 @@ function ProjectDetailPage() {
       await backend.entities.Milestone.create({
         project_id: projectId,
         title: milestone.title.trim(),
+        start_date: milestone.start_date,
         due_date: milestone.due_date,
         status: "pending",
       });
@@ -137,7 +139,7 @@ function ProjectDetailPage() {
         entityId: projectId,
         label: milestone.title.trim(),
       });
-      setMilestone({ title: "", due_date: "" });
+      setMilestone({ title: "", start_date: "", due_date: "" });
       refresh();
     } catch (error: any) {
       toast.error(error?.message || "Could not add the milestone.");
@@ -153,6 +155,19 @@ function ProjectDetailPage() {
       refresh();
     } catch (error: any) {
       toast.error(error?.message || "Could not update the milestone.");
+    }
+  };
+
+  const deleteMilestone = async (item: any) => {
+    if (!canDelete) return;
+    if (!window.confirm(`Delete milestone “${item.title}”? This cannot be undone.`)) return;
+    try {
+      await backend.entities.Milestone.delete(item.id);
+      await logActivity({ user, action: "Milestone deleted", entityType: "Project", entityId: projectId, label: item.title });
+      refresh();
+      toast.success("Milestone deleted");
+    } catch (error: any) {
+      toast.error(error?.message || "Could not delete the milestone.");
     }
   };
 
@@ -360,15 +375,16 @@ function ProjectDetailPage() {
                       >
                         {item.title}
                       </p>
-                      {item.due_date && (
+                      {(item.start_date || item.due_date) && (
                         <p className="text-[11px] text-muted-foreground">
-                          Due {fmtDate(item.due_date)}
+                          {item.start_date ? `Start ${fmtDate(item.start_date)}` : "Start date not set"}{item.due_date ? ` · Due ${fmtDate(item.due_date)}` : " · End date not set"}
                         </p>
                       )}
                     </div>
                     <Flag
                       className={`h-3.5 w-3.5 ${item.status === "completed" ? "text-emerald-500" : "text-slate-300"}`}
                     />
+                    {canDelete && <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label={`Delete ${item.title}`} onClick={() => deleteMilestone(item)}><Trash2 className="h-3.5 w-3.5" /></Button>}
                   </li>
                 ))}
               </ul>
@@ -387,13 +403,16 @@ function ProjectDetailPage() {
               />
               <Input
                 type="date"
+                aria-label="Milestone start date"
+                value={milestone.start_date}
+                onChange={(e) => setMilestone((prev) => ({ ...prev, start_date: e.target.value }))}
+                className="h-9 w-full bg-white text-[13px] sm:w-[150px]"
+              />
+              <Input
+                type="date"
+                aria-label="Milestone target date"
                 value={milestone.due_date}
-                onChange={(e) =>
-                  setMilestone((prev) => ({
-                    ...prev,
-                    due_date: e.target.value,
-                  }))
-                }
+                onChange={(e) => setMilestone((prev) => ({ ...prev, due_date: e.target.value }))}
                 className="h-9 w-full bg-white text-[13px] sm:w-[150px]"
               />
               <Button type="submit" size="sm" variant="outline">

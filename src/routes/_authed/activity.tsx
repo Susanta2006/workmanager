@@ -37,9 +37,7 @@ function ActivityPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["activity-page"],
-    queryFn: async () => ({
-      logs: await fetchAll("ActivityLog", null),
-    }),
+    queryFn: async () => ({ logs: await fetchAll("ActivityLog", null) }),
   });
 
   const logs: any[] = useMemo(() => data?.logs || [], [data]);
@@ -80,7 +78,7 @@ function ActivityPage() {
     <div>
       <PageHeader
         title="Activity log"
-        description="An append-only trail of the actions taken in this workspace. Logs are cleared on the 1st of each month."
+        description="An append-only trail of workspace actions. Older entries are automatically purged by the monthly database retention job."
       />
 
       <DataToolbar>

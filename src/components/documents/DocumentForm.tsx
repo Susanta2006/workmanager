@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from "lucide-react";
 import {
   DOC_TYPES,
@@ -63,6 +64,7 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
         client_name: client.name,
         project_id: changed ? "" : prev.project_id,
         project_name: changed ? "" : prev.project_name,
+        project_milestones_snapshot: changed ? undefined : prev.project_milestones_snapshot,
       };
     });
   };
@@ -80,12 +82,22 @@ export default function DocumentForm({ form, setForm, settings, ledger = EMPTY_L
   const pickProject = (id: any) => {
     const project = clientProjects.find((p: any) => p.id === id);
     if (!project) return;
-    setForm((prev: any) => ({ ...prev, project_id: project.id, project_name: project.title }));
+    setForm((prev: any) => ({ ...prev, project_id: project.id, project_name: project.title, project_milestones_snapshot: prev.project_id === project.id ? prev.project_milestones_snapshot : undefined }));
   };
   const meta = docTypeMeta(form.doc_type);
   const totals = computeTotals(form.items, form.tax_rate);
   const paymentVisible = showsPayment(form);
   const selectedProject = clientProjects.find((p: any) => p.id === form.project_id);
+  const milestonesQuery = useQuery({
+    queryKey: ["sow-milestones-snapshot", selectedProject?.id],
+    queryFn: () => fetchAll("Milestone", { project_id: selectedProject.id }),
+    enabled: form.doc_type === "sow" && Boolean(selectedProject?.id),
+  });
+  useEffect(() => {
+    if (form.doc_type !== "sow" || form.status !== "draft" || !selectedProject?.id || !milestonesQuery.isSuccess || form.project_milestones_snapshot) return;
+    const snapshot = (milestonesQuery.data || []).map((item: any) => ({ title: item.title, start_date: item.start_date || "", due_date: item.due_date || "", status: item.status || "pending" }));
+    update("project_milestones_snapshot", snapshot);
+  }, [form.doc_type, form.status, selectedProject?.id, milestonesQuery.data, milestonesQuery.isSuccess, form.project_milestones_snapshot]);
   const billed = isProjectBilled(form, selectedProject);
   // Live figures from the ledger: the same numbers the printed paper shows.
   const fin = documentFinancials(

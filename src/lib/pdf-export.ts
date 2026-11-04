@@ -49,9 +49,24 @@ export async function downloadDocumentPdf(element: HTMLElement, filename: string
       backgroundColor: "#ffffff",
       logging: false,
       windowWidth: 794,
+      // Let long legal clauses flow naturally across pages instead of shrinking the entire paper.
+      onclone: (clonedDoc: Document) => {
+        const clonedPaper = clonedDoc.querySelector<HTMLElement>(".doc-paper-pdf");
+        if (clonedPaper) {
+          clonedPaper.style.height = "auto";
+          clonedPaper.style.minHeight = "0";
+          clonedPaper.style.overflow = "visible";
+          clonedPaper.style.boxSizing = "border-box";
+        }
+        clonedDoc.querySelectorAll<HTMLElement>(".doc-paper-pdf *").forEach((node) => {
+          node.style.maxHeight = "none";
+          node.style.overflow = "visible";
+        });
+      },
     },
     jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".avoid-break"] },
+    enableLinks: true,
   };
   type Worker = {
     set(opts: Record<string, unknown>): { from(el: HTMLElement): { save(name?: string): Promise<void> } };
