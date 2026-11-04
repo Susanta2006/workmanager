@@ -11,6 +11,32 @@ export async function downloadDocumentPdf(element: HTMLElement, filename: string
   if (!element) throw new Error("The document is not ready yet. Try again in a moment.");
   const paper =
     (element.matches(".doc-paper") ? element : element.querySelector<HTMLElement>(".doc-paper")) ?? element;
+
+  // PrivateImage resolves Supabase signed URLs asynchronously. Do not clone the paper until
+  // every configured private asset has either loaded or reported a failure.
+  const privateImages = Array.from(paper.querySelectorAll<HTMLElement>("[data-private-image]"));
+  await Promise.all(privateImages.map((wrapper) => new Promise<void>((resolve, reject) => {
+    if (wrapper.dataset.loaded === "true") { resolve(); return; }
+    if (wrapper.dataset.error === "true") { reject(new Error("A private document image could not be loaded. Check the uploaded signature/seal in Settings.")); return; }
+    let timeout: number | undefined;
+    const observer = new MutationObserver(() => {
+      if (wrapper.dataset.loaded === "true") {
+        if (timeout !== undefined) window.clearTimeout(timeout);
+        observer.disconnect();
+        resolve();
+      } else if (wrapper.dataset.error === "true") {
+        if (timeout !== undefined) window.clearTimeout(timeout);
+        observer.disconnect();
+        reject(new Error("A private document image could not be loaded. Check the uploaded signature/seal in Settings."));
+      }
+    });
+    observer.observe(wrapper, { attributes: true, attributeFilter: ["data-loaded", "data-error"] });
+    timeout = window.setTimeout(() => {
+      observer.disconnect();
+      reject(new Error("Timed out loading a private document image. Try again."));
+    }, 15000);
+  })));
+
   const { default: html2pdf } = await import("html2pdf.js");
 
   const host = document.createElement("div");
@@ -38,6 +64,32 @@ export async function downloadDocumentPdf(element: HTMLElement, filename: string
   host.appendChild(clone);
   document.body.appendChild(host);
 
+  try {
+  // Wait for every cloned image (including privately signed seal/signature URLs) before canvas capture.
+  const images = Array.from(clone.querySelectorAll("img"));
+  await Promise.all(images.map(async (img) => {
+    if (!img.complete) {
+      await new Promise<void>((resolve, reject) => {
+        const onLoad = () => { cleanup(); resolve(); };
+        const onError = () => { cleanup(); reject(new Error(`A document image could not be loaded: ${img.alt || "embedded image"}`)); };
+        const timeout = window.setTimeout(() => { cleanup(); reject(new Error(`Timed out loading document image: ${img.alt || "embedded image"}`)); }, 15000);
+        const cleanup = () => {
+          if (timeout !== undefined) window.clearTimeout(timeout);
+          img.removeEventListener("load", onLoad);
+          img.removeEventListener("error", onError);
+        };
+        img.addEventListener("load", onLoad, { once: true });
+        img.addEventListener("error", onError, { once: true });
+      });
+    }
+    if (typeof img.decode === "function") {
+      try { await img.decode(); } catch { throw new Error(`A document image could not be decoded: ${img.alt || "embedded image"}`); }
+    }
+    if (!img.naturalWidth || !img.naturalHeight) {
+      throw new Error(`A document image is unavailable: ${img.alt || "embedded image"}`);
+    }
+  }));
+
   // html2pdf reads these page-break hints at runtime; its type file leaves them out, so the options are cast.
   const options: Record<string, unknown> = {
     margin: 0,
@@ -58,9 +110,9 @@ export async function downloadDocumentPdf(element: HTMLElement, filename: string
           clonedPaper.style.overflow = "visible";
           clonedPaper.style.boxSizing = "border-box";
         }
-        clonedDoc.querySelectorAll<HTMLElement>(".doc-paper-pdf *").forEach((node) => {
-          node.style.maxHeight = "none";
+        clonedDoc.querySelectorAll<HTMLElement>(".doc-paper-pdf .legal-body").forEach((node) => {
           node.style.overflow = "visible";
+          node.style.height = "auto";
         });
       },
     },
@@ -71,7 +123,6 @@ export async function downloadDocumentPdf(element: HTMLElement, filename: string
   type Worker = {
     set(opts: Record<string, unknown>): { from(el: HTMLElement): { save(name?: string): Promise<void> } };
   };
-  try {
     await (html2pdf() as unknown as Worker).set(options).from(clone).save();
   } finally {
     host.remove();
