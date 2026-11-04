@@ -17,6 +17,7 @@ const WORKSPACE_KEYS = [
   ["activity-page"],
   ["global-search-index"],
   ["form-clients"],
+  ["form-projects"],
 ];
 
 /** Marks every workspace screen stale so it refetches and shows the latest payments and client details. */
