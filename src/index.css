@@ -328,3 +328,46 @@
   object-fit: contain;
   object-position: left center;
 }
+
+
+/* Keep bilateral legal signature columns on identical baselines. */
+.doc-paper .legal-signature-grid {
+  align-items: start;
+}
+.doc-paper .legal-signature-column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.doc-paper .legal-signature-heading {
+  min-height: 5mm;
+}
+.doc-paper .legal-signature-identity {
+  box-sizing: border-box;
+  height: 12mm;
+  min-height: 12mm;
+  overflow: hidden;
+}
+.doc-paper .legal-signature-seal-slot {
+  box-sizing: border-box;
+  display: flex;
+  height: 34mm;
+  min-height: 34mm;
+  flex: 0 0 34mm;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+.doc-paper .legal-signature-seal-slot img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 30mm;
+  object-fit: contain;
+  object-position: left center;
+}
+.doc-paper .legal-signature-line {
+  width: 100%;
+  min-height: 0;
+}
