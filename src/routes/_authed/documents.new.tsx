@@ -9,9 +9,9 @@ import { fetchAll, logActivity, pushNotification } from "@/lib/db";
 import { useAuth } from "@/lib/AuthContext";
 import { useOrgSettings } from "@/lib/org-settings";
 import { computeTotals, docTypeMeta, emptyItem } from "@/lib/doc-types";
-import { buildLedger, documentFinancials, resolveStatus } from "@/lib/doc-finance";
+import { buildLedger, documentFinancials, invoiceSnapshot, resolveStatus } from "@/lib/doc-finance";
 import { templateBodyFor } from "@/lib/doc-templates";
-import { inr } from "@/lib/format";
+import { inr, num } from "@/lib/format";
 import PageHeader from "@/components/common/PageHeader";
 import DocumentForm from "@/components/documents/DocumentForm";
 import DocumentPaper from "@/components/documents/DocumentPaper";
@@ -96,7 +96,12 @@ function NewDocumentEditor({ search, settings, data }: any) {
   const selectedProject = data.projects.find((p: any) => p.id === form.project_id);
   const totals = useMemo(() => computeTotals(form.items, form.tax_rate), [form.items, form.tax_rate]);
   // The figures the saved document will carry. Project-billed invoices take the project's agreed value.
-  const fin = documentFinancials({ ...form, total: totals.total }, selectedProject, ledger);
+  const billedNew = Boolean(
+    form.doc_type === "invoice" && selectedProject && num(selectedProject.project_value) > 0 && form.show_payment !== false,
+  );
+  // A new invoice freezes its project figures now, so the client keeps the same numbers.
+  const frozen = billedNew ? invoiceSnapshot(ledger, selectedProject, form.issue_date) : null;
+  const fin = documentFinancials({ ...form, project_billing: frozen, total: totals.total }, selectedProject, ledger);
 
   const save = async () => {
     if (!form.client_id) {
@@ -114,10 +119,11 @@ function NewDocumentEditor({ search, settings, data }: any) {
         title: form.title || docTypeMeta(form.doc_type).label,
         tax_rate: Number(form.tax_rate || 0),
         ...totals,
-        total: fin.total,
-        amount_paid: fin.received,
-        balance_due: fin.balance,
-        status: resolveStatus({ ...form }, fin),
+        total: form.doc_type === "invoice" ? fin.toBePaid : totals.total,
+        amount_paid: form.doc_type === "invoice" ? fin.received : 0,
+        balance_due: form.doc_type === "invoice" ? fin.dueNow : 0,
+        project_billing: frozen,
+        status: resolveStatus({ ...form, project_billing: frozen }, fin),
         currency: "INR",
       };
       delete (payload as any).doc_number;
@@ -149,9 +155,10 @@ function NewDocumentEditor({ search, settings, data }: any) {
   const previewDoc = {
     ...form,
     ...totals,
-    total: fin.total,
-    amount_paid: fin.received,
-    balance_due: fin.balance,
+    project_billing: frozen,
+    total: form.doc_type === "invoice" ? fin.toBePaid : totals.total,
+    amount_paid: form.doc_type === "invoice" ? fin.received : 0,
+    balance_due: form.doc_type === "invoice" ? fin.dueNow : 0,
   };
 
   return (

@@ -22,7 +22,7 @@ import { usePermissions } from "@/lib/permissions";
 import { useOrgSettings } from "@/lib/org-settings";
 import { refreshWorkspaceData } from "@/lib/sync";
 import { DOC_STATUS, computeTotals, docTypeLabel } from "@/lib/doc-types";
-import { buildLedger, documentFinancials, resolveStatus } from "@/lib/doc-finance";
+import { buildLedger, documentFinancials, invoiceSnapshot, receiptSnapshot, resolveStatus } from "@/lib/doc-finance";
 import { downloadDocumentPdf, pdfFilename } from "@/lib/pdf-export";
 import { fmtDate, inr, num } from "@/lib/format";
 import DocumentForm from "@/components/documents/DocumentForm";
@@ -102,15 +102,29 @@ function DocumentDetailPage() {
       const totals = computeTotals(form.items, form.tax_rate);
       // Project-billed invoices take their total from the project and are not tax-adjusted.
       const billedProject = (data?.projects || []).find((p: any) => p.id === form.project_id);
-      const live = documentFinancials({ ...form, total: totals.total }, billedProject, ledger);
+      if (doc.doc_type === "quotation") {
+        setError("A quotation is the fixed project price and cannot be edited.");
+        setSaving(false);
+        return;
+      }
+      // Invoices freeze their project figures when issued. Later edits change only the lines.
+      const billed = Boolean(billedProject && num(billedProject.project_value) > 0);
+      const frozen = billed
+        ? form.project_billing?.paid_before !== undefined && form.project_billing?.paid_before !== null
+          ? form.project_billing
+          : invoiceSnapshot(ledger, billedProject, form.issue_date)
+        : form.project_billing || null;
+      const draft = { ...form, project_billing: frozen };
+      const live = documentFinancials(draft, billedProject, ledger);
       await backend.entities.Document.update(documentId, {
         ...form,
         tax_rate: Number(form.tax_rate || 0),
         ...totals,
-        total: live.total,
+        total: live.toBePaid,
         amount_paid: live.received,
-        balance_due: live.balance,
-        status: resolveStatus({ ...form }, live),
+        balance_due: live.dueNow,
+        project_billing: frozen,
+        status: resolveStatus(draft, live),
       });
       await logActivity({
         user,
@@ -140,6 +154,10 @@ function DocumentDetailPage() {
           await backend.entities.Payment.update(payment.id, { project_id: doc.project_id });
           payment.project_id = doc.project_id;
         }
+      }
+      // Deleting a receipt frees its payment, so the payment can have a new receipt.
+      for (const payment of (data?.payments || []).filter((p: any) => p.receipt_id === documentId)) {
+        await backend.entities.Payment.update(payment.id, { receipt_id: "", receipt_number: "" });
       }
       await backend.entities.Document.delete(documentId);
       await logActivity({
@@ -173,11 +191,21 @@ function DocumentDetailPage() {
   };
 
   const createReceipt = async (payment: any) => {
+    if (payment.receipt_id) {
+      toast.info(`A receipt (${payment.receipt_number}) already exists for this payment.`);
+      navigate({ to: "/documents/$documentId", params: { documentId: payment.receipt_id } });
+      return;
+    }
+    if (!payment.document_id) {
+      toast.error("Attach this payment to an invoice before creating a receipt.");
+      return;
+    }
     try {
       const receiptProjectId = payment.project_id || doc.project_id || "";
+      const receiptProject = (data?.projects || []).find((p: any) => p.id === receiptProjectId);
       const items = [
         {
-          description: `Payment received against ${doc.doc_number}`,
+          description: `Payment received against ${doc.doc_number} · ${fmtDate(payment.payment_date)}${payment.method ? ` · ${PAYMENT_METHOD_LABELS[payment.method] || payment.method}` : ""}`,
           quantity: 1,
           rate: num(payment.amount),
           discount: 0,
@@ -194,7 +222,8 @@ function DocumentDetailPage() {
             client_id: doc.client_id,
             client_name: doc.client_name || client?.name || "",
             project_id: receiptProjectId,
-            project_name: doc.project_name || project?.title || "",
+            project_name: doc.project_name || receiptProject?.title || project?.title || "",
+            project_billing: receiptProject && num(receiptProject.project_value) > 0 ? receiptSnapshot(ledger, receiptProject, payment) : null,
             issue_date: payment.payment_date,
             items,
             tax_rate: 0,
@@ -209,8 +238,13 @@ function DocumentDetailPage() {
           },
         },
       });
-      // Sets the receipt's balance-left figure from the ledger as it stands now.
+      // Record the receipt on the payment, then refresh the invoice and every screen that shows it.
+      await backend.entities.Payment.update(payment.id, {
+        receipt_id: created.id,
+        receipt_number: created.doc_number,
+      });
       await syncPaymentBalances(payment);
+      await refreshWorkspaceData(queryClient);
       await logActivity({
         user,
         action: "Receipt generated",
@@ -262,7 +296,7 @@ function DocumentDetailPage() {
               · issued {fmtDate(doc.issue_date)}
               {fin.billed && doc.doc_type === "invoice" ? (
                 <>
-                  {" "}· to be paid {inr(fin.toBePaid)} · actual price {inr(fin.total)} · left to pay{" "}
+                  {" "}· to be paid {inr(fin.toBePaid)} · actual price {inr(fin.actual)} · already paid {inr(fin.paidBefore)} · left to pay{" "}
                   <strong className={balance > 0 ? "text-amber-700" : "text-emerald-700"}>
                     {inr(balance)}
                   </strong>
@@ -285,11 +319,12 @@ function DocumentDetailPage() {
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
             </Button>
-            {["invoice", "quotation"].includes(doc.doc_type) && (
+            {doc.doc_type === "invoice" && (
               <Button variant="outline" size="sm" onClick={() => setPayOpen(true)}>
                 <Wallet className="mr-1.5 h-3.5 w-3.5" /> Record payment
               </Button>
             )}
+            {doc.doc_type !== "quotation" && (
             <Button
               variant={editing ? "secondary" : "outline"}
               size="sm"
@@ -297,6 +332,7 @@ function DocumentDetailPage() {
             >
               <Pencil className="mr-1.5 h-3.5 w-3.5" /> {editing ? "Close editor" : "Edit"}
             </Button>
+            )}
             {canDelete && (
               <Button
                 variant="ghost"
@@ -378,7 +414,8 @@ function DocumentDetailPage() {
                 </div>
                 {doc.doc_type === "invoice" && payment.status === "received" && (
                   <Button variant="ghost" size="sm" onClick={() => createReceipt(payment)}>
-                    <Receipt className="mr-1.5 h-3.5 w-3.5" /> Receipt
+                    <Receipt className="mr-1.5 h-3.5 w-3.5" />
+                    {payment.receipt_number ? `View ${payment.receipt_number}` : "Create receipt"}
                   </Button>
                 )}
               </li>

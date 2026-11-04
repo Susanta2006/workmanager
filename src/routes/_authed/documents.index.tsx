@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchClients } from "@/lib/clients";
-import { balanceOf } from "@/lib/doc-finance";
+import { balanceOf, buildLedger, ledgerNet } from "@/lib/doc-finance";
 
 export const Route = createFileRoute("/_authed/documents/")({
   head: () => ({ meta: [{ title: "Documents · WorkManager" }] }),
@@ -47,11 +47,13 @@ function DocumentsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["documents-page"],
     queryFn: async () => {
-      const [documents, clients] = await Promise.all([
+      const [documents, clients, projects, payments] = await Promise.all([
         fetchAll("Document", null),
         fetchClients(),
+        fetchAll("Project", null),
+        fetchAll("Payment", null),
       ]);
-      return { documents, clients };
+      return { documents, clients, projects, payments };
     },
   });
 
@@ -93,14 +95,33 @@ function DocumentsPage() {
     const invoices = (data?.documents || []).filter(
       (d: any) => d.doc_type === "invoice" && d.status !== "cancelled",
     );
+    // Outstanding is counted once per project: the project's agreed price less everything received on it.
+    // Invoices without a project count their own amount still to collect.
+    const ledger = buildLedger(data?.payments || [], data?.documents || []);
+    const projectsById: Record<string, any> = Object.fromEntries(
+      (data?.projects || []).map((p: any) => [p.id, p]),
+    );
+    const billedProjectIds = new Set(
+      invoices
+        .filter((d: any) => d.project_id && num(projectsById[d.project_id]?.project_value) > 0)
+        .map((d: any) => d.project_id),
+    );
+    let outstanding = 0;
+    billedProjectIds.forEach((projectId) => {
+      const project = projectsById[projectId];
+      if (num(project.project_value) <= 0) return;
+      const received = ledgerNet(ledger.payments.filter((p: any) => p._project_id === projectId));
+      outstanding += Math.max(0, num(project.project_value) - received);
+    });
+    invoices
+      .filter((d: any) => !billedProjectIds.has(d.project_id))
+      .forEach((d: any) => {
+        outstanding += balanceOf(d);
+      });
     return {
       invoiced: invoices.reduce((sum: any, d: any) => sum + num(d.total), 0),
       received: invoices.reduce((sum: any, d: any) => sum + num(d.amount_paid), 0),
-      outstanding: invoices.reduce(
-        (sum: any, d: any) =>
-          sum + balanceOf(d),
-        0,
-      ),
+      outstanding,
     };
   }, [data]);
 
