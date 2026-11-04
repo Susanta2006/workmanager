@@ -254,11 +254,19 @@
   }
 
   /* Do not split tables, rows or the signature block across pages. */
-  .doc-paper table,
   .doc-paper tr,
-  .doc-paper > div:last-child {
+  .doc-paper .avoid-break,
+  .doc-paper .document-signature-block {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .doc-paper thead {
+    display: table-header-group;
+  }
+
+  .doc-paper tfoot {
+    display: table-footer-group;
   }
 }
 
@@ -279,4 +287,44 @@
   overflow: visible;
   break-inside: auto;
   page-break-inside: auto;
+}
+
+
+/* SOW milestone schedule: fixed A4 columns, repeatable heading and indivisible rows. */
+.doc-paper .sow-milestone-section {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+.doc-paper .sow-milestone-heading {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+.doc-paper .sow-milestone-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+.doc-paper .sow-milestone-table thead {
+  display: table-header-group;
+}
+.doc-paper .sow-milestone-row {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.doc-paper .sow-milestone-table th,
+.doc-paper .sow-milestone-table td {
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.doc-paper .document-signature-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.doc-paper .document-signature-block img {
+  max-width: 100%;
+  max-height: 32mm;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: left center;
 }
