@@ -25,6 +25,7 @@ import { DOC_STATUS, computeTotals, docTypeLabel } from "@/lib/doc-types";
 import { buildLedger, documentFinancials, invoiceSnapshot, receiptSnapshot, resolveStatus } from "@/lib/doc-finance";
 import { downloadDocumentPdf, pdfFilename } from "@/lib/pdf-export";
 import { fmtDate, inr, num } from "@/lib/format";
+import { milestoneSnapshot } from "@/lib/milestones";
 import DocumentForm from "@/components/documents/DocumentForm";
 import DocumentPaper from "@/components/documents/DocumentPaper";
 import FitToWidth from "@/components/documents/FitToWidth";
@@ -87,6 +88,13 @@ function DocumentDetailPage() {
   // Live figures from the payment ledger. The same numbers are printed and used for balance checks.
   const fin = doc ? documentFinancials(doc, project, ledger) : null;
   const docPayments = fin ? fin.rows.filter((p: any) => ["received", "refunded"].includes(p.status)) : [];
+  const isIssuedLegalDocument = Boolean(
+    doc && ["agreement", "nda", "sow", "maintenance", "certificate", "handover", "custom"].includes(doc.doc_type) && doc.status !== "draft",
+  );
+  const revisionRootId = doc?.revision_of_document_id || doc?.id;
+  const revisionHistory = (data?.documents || [])
+    .filter((item: any) => item.id === revisionRootId || item.revision_of_document_id === revisionRootId)
+    .sort((a: any, b: any) => Number(a.revision_number || 1) - Number(b.revision_number || 1));
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ["document-detail", documentId] });
@@ -94,6 +102,10 @@ function DocumentDetailPage() {
   const save = async () => {
     if (!form.client_id) {
       setError("Choose a client from the list.");
+      return;
+    }
+    if (["agreement", "nda", "sow", "maintenance", "certificate", "handover", "custom"].includes(doc.doc_type) && doc.status !== "draft") {
+      setError("This legal document has been issued. Its contents are locked to preserve the issued record. Create a revised SOW where applicable to make agreed changes.");
       return;
     }
     setSaving(true);
@@ -116,8 +128,69 @@ function DocumentDetailPage() {
         : form.project_billing || null;
       const draft = { ...form, project_billing: frozen };
       const live = documentFinancials(draft, billedProject, ledger);
+      const issueTransition = doc.status === "draft" && form.status !== "draft" &&
+        ["agreement", "nda", "sow", "maintenance", "certificate", "handover", "custom"].includes(doc.doc_type);
+      let issueSnapshot: Record<string, any> = {};
+      if (issueTransition) {
+        const currentClient = data?.clients.find((item: any) => item.id === form.client_id);
+        const currentProject = (data?.projects || []).find((item: any) => item.id === form.project_id);
+        const milestoneRows = doc.doc_type === "sow" && currentProject
+          ? await fetchAll("Milestone", { project_id: currentProject.id })
+          : [];
+        issueSnapshot = {
+          client_snapshot: currentClient ? {
+            id: currentClient.id,
+            name: currentClient.name || "",
+            legal_name: currentClient.legal_name || currentClient.name || "",
+            authorised_signatory_name: form.client_authorised_signatory_name || currentClient.authorised_signatory_name || "",
+            contact_person: currentClient.contact_person || "",
+            email: currentClient.email || "",
+            phone: currentClient.phone || "",
+            billing_address: currentClient.billing_address || "",
+            tax_id: currentClient.tax_id || "",
+          } : null,
+          organization_snapshot: {
+            company_name: settings.company_name || "",
+            signature_name: settings.signature_name || "",
+            signature_uri: settings.signature_uri || "",
+            logo_url: settings.logo_url || "",
+            tagline: settings.tagline || "",
+            address: settings.address || "",
+            email: settings.email || "",
+            phone: settings.phone || "",
+            website: settings.website || "",
+            udyam_number: settings.udyam_number || "",
+            gstin: settings.gstin || "",
+            governing_law: settings.governing_law || "",
+            jurisdiction_city: settings.jurisdiction_city || "",
+            jurisdiction_state: settings.jurisdiction_state || "",
+            jurisdiction_country: settings.jurisdiction_country || "",
+            bank_details: settings.bank_details || "",
+            payment_instructions: settings.payment_instructions || "",
+            default_terms: settings.default_terms || "",
+            default_footer: settings.default_footer || "",
+          },
+          document_issued_at: new Date().toISOString(),
+          revision_number: Number(doc.revision_number || 1),
+          revision_date: form.issue_date,
+          ...(currentProject ? {
+            project_reference_snapshot: {
+              id: currentProject.id,
+              title: currentProject.title || "",
+              project_code: currentProject.project_code || "",
+              start_date: currentProject.start_date || "",
+              deadline: currentProject.deadline || "",
+            },
+          } : {}),
+          ...(doc.doc_type === "sow" ? {
+            project_milestones_snapshot: currentProject ? milestoneSnapshot(milestoneRows, currentProject.id) : [],
+            ...(!currentProject ? { project_reference_snapshot: null } : {}),
+          } : {}),
+        };
+      }
       await backend.entities.Document.update(documentId, {
         ...form,
+        ...issueSnapshot,
         tax_rate: Number(form.tax_rate || 0),
         ...totals,
         total: live.toBePaid,
@@ -141,6 +214,39 @@ function DocumentDetailPage() {
       setError(err?.message || "Could not update this document.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const createRevision = async () => {
+    if (!doc || doc.doc_type !== "sow" || doc.status === "draft") return;
+    setBusy(true);
+    try {
+      const siblings = (data?.documents || []).filter((item: any) =>
+        item.revision_of_document_id === (doc.revision_of_document_id || doc.id),
+      );
+      const revisionNumber = Math.max(Number(doc.revision_number || 1), ...siblings.map((item: any) => Number(item.revision_number || 1))) + 1;
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+      const revision = { ...doc };
+      [
+        "id", "created_date", "updated_date", "created_by_id", "doc_number",
+        "project_milestones_snapshot", "project_reference_snapshot", "client_snapshot",
+        "organization_snapshot", "document_issued_at",
+      ].forEach((key) => delete (revision as any)[key]);
+      const created = await createDoc({ data: { doc: {
+        ...revision,
+        status: "draft",
+        issue_date: today,
+        revision_of_document_id: doc.revision_of_document_id || doc.id,
+        revision_number: revisionNumber,
+        revision_date: today,
+        revision_reason: "",
+      } } });
+      toast.success(`Revision ${revisionNumber} created as a draft`);
+      navigate({ to: "/documents/$documentId", params: { documentId: created.id } });
+    } catch (err: any) {
+      toast.error(err?.message || "Could not create the revised SOW.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -310,6 +416,11 @@ function DocumentDetailPage() {
                 </>
               )}
             </p>
+            {isIssuedLegalDocument && (
+              <p className="mt-2 text-[11px] text-amber-700">
+                Issued legal record is locked. Contractual content cannot be edited or deleted; create a revised SOW to document agreed SOW changes.
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={downloadPdf} disabled={pdfBusy}>
@@ -324,16 +435,23 @@ function DocumentDetailPage() {
                 <Wallet className="mr-1.5 h-3.5 w-3.5" /> Record payment
               </Button>
             )}
+            {doc.doc_type === "sow" && doc.status !== "draft" && (
+              <Button variant="outline" size="sm" onClick={createRevision} disabled={busy}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" /> Create revised SOW
+              </Button>
+            )}
             {doc.doc_type !== "quotation" && (
             <Button
               variant={editing ? "secondary" : "outline"}
               size="sm"
               onClick={() => setEditing((value) => !value)}
+              disabled={["agreement", "nda", "sow", "maintenance", "certificate", "handover", "custom"].includes(doc.doc_type) && doc.status !== "draft"}
+              title={["agreement", "nda", "sow", "maintenance", "certificate", "handover", "custom"].includes(doc.doc_type) && doc.status !== "draft" ? "Issued legal documents are immutable." : undefined}
             >
               <Pencil className="mr-1.5 h-3.5 w-3.5" /> {editing ? "Close editor" : "Edit"}
             </Button>
             )}
-            {canDelete && (
+            {canDelete && !isIssuedLegalDocument && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -345,6 +463,24 @@ function DocumentDetailPage() {
             )}
           </div>
         </div>
+
+        {doc.doc_type === "sow" && revisionHistory.length > 1 && (
+          <div className="surface mb-4 p-3">
+            <h2 className="mb-2 text-[12px] font-semibold text-slate-700">SOW revision history</h2>
+            <div className="flex flex-wrap gap-2">
+              {revisionHistory.map((revision: any) => (
+                <Link
+                  key={revision.id}
+                  to="/documents/$documentId"
+                  params={{ documentId: revision.id }}
+                  className={`rounded-md border px-2.5 py-1.5 text-[11px] ${revision.id === doc.id ? "border-primary bg-accent font-semibold text-accent-foreground" : "border-border bg-white text-slate-600 hover:bg-slate-50"}`}
+                >
+                  Rev. {revision.revision_number || 1} · {revision.doc_number} · {revision.status}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {editing && form && (
           <div className="surface mb-4 p-4">

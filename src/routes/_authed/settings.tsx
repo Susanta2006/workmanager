@@ -16,7 +16,6 @@ import { logActivity } from "@/lib/db";
 import { useAuth } from "@/lib/AuthContext";
 import { usePermissions } from "@/lib/permissions";
 import { useOrgSettings } from "@/lib/org-settings";
-import { convertSignature, SIGNATURE_INKS } from "@/lib/signature";
 import PrivateImage from "@/components/common/PrivateImage";
 import PageHeader from "@/components/common/PageHeader";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -48,11 +47,9 @@ function SettingsPage() {
   const [form, setForm] = useState(settings);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState("");
-  const [ink, setInk] = useState("black");
 
   useEffect(() => {
     setForm(settings);
-    setInk(settings.signature_ink || "black");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [record?.id, isLoading]);
 
@@ -68,7 +65,6 @@ function SettingsPage() {
         ...editable,
         default_tax_rate: Number(form.default_tax_rate || 0),
         reminder_lead_days: Number(form.reminder_lead_days || 3),
-        signature_ink: ink,
       };
       if (record?.id)
         await backend.entities.OrgSettings.update(record.id, payload);
@@ -112,15 +108,12 @@ function SettingsPage() {
     if (!file) return;
     setUploading("signature");
     try {
-      const converted = await convertSignature(file, ink);
-      const { file_uri } = await backend.files.uploadPrivate({
-        file: converted,
-      });
+      if (!file.type.startsWith("image/")) throw new Error("Upload a PNG, JPG or other image file.");
+      if (file.size > 5 * 1024 * 1024) throw new Error("The company seal/signature image must be under 5 MB.");
+      // Preserve the exact uploaded asset, including the seal's original colour and proportions.
+      const { file_uri } = await backend.files.uploadPrivate({ file });
       set("signature_uri")(file_uri);
-      set("signature_ink")(ink);
-      toast.success(
-        `Signature cleaned up in ${ink === "blue" ? "blue" : "black"} ink — remember to save`,
-      );
+      toast.success("Company seal/signature image uploaded — remember to save");
     } catch (error: any) {
       toast.error(error?.message || "Could not process that signature.");
     } finally {
@@ -164,7 +157,7 @@ function SettingsPage() {
         <TabsList className="mb-3 flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
           {[
             { value: "company", label: "Company profile", icon: Building2 },
-            { value: "signature", label: "Signature", icon: PenTool },
+            { value: "signature", label: "Seal & signature", icon: PenTool },
             { value: "notifications", label: "Notifications", icon: Bell },
             { value: "integrations", label: "Integrations", icon: Plug },
           ].map((tab) => (
@@ -360,44 +353,16 @@ function SettingsPage() {
         <TabsContent value="signature">
           <div className="surface space-y-4 p-4">
             <div>
-              <p className="text-[12.5px] font-medium">Signature image</p>
+              <p className="text-[12.5px] font-medium">Company seal / signature image</p>
               <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
-                Upload a photo or scan of your signature under 5 MB. It is
-                converted to a clean white background with crisp ink, so it
-                prints like a real signature on every document.
+                Upload the existing company seal, signature, or combined seal-and-signature image (under 5 MB). The original image is stored and rendered without recolouring, cropping or stretching.
               </p>
             </div>
 
             <div className="flex flex-wrap items-end gap-3">
-              <div>
-                <p className="mb-1 text-[12px] font-medium text-slate-600">
-                  Ink colour
-                </p>
-                <div className="flex gap-2">
-                  {Object.keys(SIGNATURE_INKS).map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setInk(key)}
-                      disabled={!canManageSettings}
-                      className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[12px] capitalize ${
-                        ink === key
-                          ? "border-primary bg-accent text-accent-foreground"
-                          : "border-border bg-white text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ background: (SIGNATURE_INKS as Record<string, any>)[key] }}
-                      />
-                      {key}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-2 text-[12px] hover:bg-slate-50">
                 <Upload className="h-3.5 w-3.5" />{" "}
-                {uploading === "signature" ? "Processing…" : "Upload signature"}
+                {uploading === "signature" ? "Uploading…" : "Upload seal / signature"}
                 <input
                   type="file"
                   accept="image/*"
@@ -422,22 +387,18 @@ function SettingsPage() {
               {form.signature_uri ? (
                 <PrivateImage
                   fileUri={form.signature_uri}
-                  alt="Signature"
+                  alt="Company seal and signature"
                   className="max-h-[90px] w-auto object-contain"
                 />
               ) : (
                 <p className="text-[12px] text-muted-foreground">
-                  No signature uploaded yet — documents will show the signatory
-                  name only.
+                  No company seal/signature image is configured. Legal documents will retain the signature area without substituting a logo or generated seal.
                 </p>
               )}
             </div>
 
             <div className="rounded-lg border border-border bg-slate-50 p-3 text-[11.5px] leading-relaxed text-slate-600">
-              Uploaded in {form.signature_ink === "blue" ? "blue" : "black"}{" "}
-              ink. The signature is stored privately (not a public link) and
-              appears above the authorised signatory line on quotations,
-              invoices, receipts and agreements.
+              The original image is stored privately and used in the company execution column of agreements. Its aspect ratio and original colours are preserved.
             </div>
           </div>
         </TabsContent>
