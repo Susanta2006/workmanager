@@ -362,25 +362,26 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
 
       <div className="document-signature-block avoid-break mt-10 pb-2">
         {isAgreement ? (
-          <div className="grid grid-cols-2 items-start gap-8 text-[9.5px] leading-relaxed text-slate-600">
-            <div className="min-w-0">
-              <p className="font-semibold uppercase tracking-[0.12em] text-slate-700">For the Client</p>
-              <p className="mt-1 break-words">Legal name: {clientName}</p>
-              <div className="flex h-[34mm] max-h-[34mm] items-center py-2" />
-              <div className="border-b border-slate-500" />
+          <div className="legal-signature-grid grid grid-cols-2 items-start gap-8 text-[9.5px] leading-relaxed text-slate-600">
+            <div className="legal-signature-column min-w-0">
+              <p className="legal-signature-heading font-semibold uppercase tracking-[0.12em] text-slate-700">For the Client</p>
+              <div className="legal-signature-identity mt-1 break-words">Legal name: {clientName}</div>
+              <div className="legal-signature-seal-slot" aria-hidden="true" />
+              <div className="legal-signature-line border-b border-slate-500" />
               <p className="mt-1">Signature of authorised signatory</p>
               <p className="mt-2 break-words">Name: {clientSignatory || "____________________________"}</p>
               <p>Date: _________________________________</p>
             </div>
-            <div className="min-w-0">
-              <p className="font-semibold uppercase tracking-[0.12em] text-slate-700">For {companyName}</p>
-              <div className="flex h-[34mm] max-h-[34mm] items-center justify-start py-2">
+            <div className="legal-signature-column min-w-0">
+              <p className="legal-signature-heading font-semibold uppercase tracking-[0.12em] text-slate-700">For {companyName}</p>
+              <div className="legal-signature-identity mt-1" aria-hidden="true" />
+              <div className="legal-signature-seal-slot">
                 {documentSettings.signature_uri ? (
                   <PrivateImage fileUri={documentSettings.signature_uri} alt="Company seal and authorised signature"
-                    className="max-h-[32mm] max-w-full object-contain object-left" />
+                    className="legal-signature-seal max-h-full max-w-full object-contain" />
                 ) : null}
               </div>
-              <div className="border-b border-slate-500" />
+              <div className="legal-signature-line border-b border-slate-500" />
               <p className="mt-1">Signature of authorised signatory</p>
               <p className="mt-2 break-words">Name: {documentSettings.signature_name || "____________________________"}</p>
               <p>Date: _________________________________</p>
