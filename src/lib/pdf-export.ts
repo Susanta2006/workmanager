@@ -1,19 +1,23 @@
 /**
  * Exports a document paper to PDF.
  *
- * The paper is always exported at its full preview width (210 mm), so the left and right
- * edges match the preview. Nothing is ever shrunk to fit:
- *   - A document that fits at full width goes on ONE A4 page (invoices and receipts).
- *   - A longer document flows onto additional A4 pages, breaking only between paragraphs,
- *     table rows and signature blocks, with the same top and bottom margin on every page.
+ * - Invoices and receipts: always ONE page at full width (210 mm), so the left and right
+ *   edges match the preview. Top and bottom padding is tightened in the export copy so
+ *   the content fits A4 where possible. If it is still taller than A4, the page is made
+ *   exactly that tall. Nothing is scaled down, so there are no side gaps.
+ * - Legal and long-form documents: flow across pages at paragraph, row and signature
+ *   boundaries, with the same top and bottom margin on every page.
  */
 
 /** A4 at 96 dpi. The paper is laid out at this width, the same as the preview. */
 const PAPER_WIDTH_PX = 794;
 const PAGE_WIDTH_MM = 210;
-const PAGE_HEIGHT_MM = 297;
-const PAGE_MARGIN_MM = 12;     // top and bottom, applied to every page of a multi-page export
+const A4_HEIGHT_MM = 297;
+const PAGE_MARGIN_MM = 12;          // top and bottom, on every page of a multi-page export
+const FINANCIAL_PADDING_MM = 8;     // export-only top and bottom padding for invoices and receipts
 const CAPTURE_SCALE = 3;
+
+const pxToMm = (px: number) => (px * PAGE_WIDTH_MM) / PAPER_WIDTH_PX;
 
 /** Waits for PrivateImage wrappers (signatures, seals) to finish loading their signed URLs. */
 function waitForPrivateImages(paper: HTMLElement): Promise<void> {
@@ -106,9 +110,9 @@ function keepParagraphsWhole(paper: HTMLElement) {
 
 /**
  * Off-screen host at the paper's exact layout width, holding a clone of the paper.
- * The clone keeps the paper's own left and right padding so the text inset matches the preview.
+ * Invoices and receipts get tighter top and bottom padding in the clone only.
  */
-function createPrintHost(paper: HTMLElement): { host: HTMLDivElement; clone: HTMLElement } {
+function createPrintHost(paper: HTMLElement, financial: boolean): { host: HTMLDivElement; clone: HTMLElement } {
   const host = document.createElement("div");
   host.setAttribute("aria-hidden", "true");
   Object.assign(host.style, {
@@ -134,22 +138,28 @@ function createPrintHost(paper: HTMLElement): { host: HTMLDivElement; clone: HTM
     overflow: "visible",
     background: "#ffffff",
   });
+  if (financial) {
+    clone.style.paddingTop = `${FINANCIAL_PADDING_MM}mm`;
+    clone.style.paddingBottom = `${FINANCIAL_PADDING_MM}mm`;
+  }
 
   host.appendChild(clone);
   document.body.appendChild(host);
   return { host, clone };
 }
 
-/** Height of the paper in millimetres when it is laid out at full page width. */
-function heightInMm(clone: HTMLElement): number {
-  return clone.getBoundingClientRect().height * (PAGE_WIDTH_MM / PAPER_WIDTH_PX);
-}
-
-/** Captures the paper once at full width. Used for the one-page case. */
-async function captureCanvas(clone: HTMLElement) {
-  const { default: html2canvas } = await import("html2canvas");
+/**
+ * One page. The page is A4 when the content fits, otherwise it is exactly as tall as the
+ * content. The width is always 210 mm, so the sides match the preview.
+ */
+async function exportOnePage(clone: HTMLElement, filename: string) {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ]);
   if ("fonts" in document) await document.fonts.ready;
-  return html2canvas(clone, {
+
+  const canvas = await html2canvas(clone, {
     scale: CAPTURE_SCALE,
     useCORS: true,
     backgroundColor: "#ffffff",
@@ -159,19 +169,15 @@ async function captureCanvas(clone: HTMLElement) {
     scrollX: 0,
     scrollY: 0,
   });
-}
 
-/**
- * One A4 page. The paper is placed at full page width, so its left and right edges line up
- * with the page edges exactly as they do in the preview. Only the bottom is blank if the
- * paper is shorter than the page.
- */
-async function exportOnePage(clone: HTMLElement, filename: string) {
-  const { jsPDF } = await import("jspdf");
-  const canvas = await captureCanvas(clone);
-
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
   const renderHeight = (canvas.height * PAGE_WIDTH_MM) / canvas.width;
+  const fitsA4 = renderHeight <= A4_HEIGHT_MM;
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: fitsA4 ? "a4" : [PAGE_WIDTH_MM, renderHeight],
+    compress: true,
+  });
   pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, PAGE_WIDTH_MM, renderHeight, undefined, "SLOW");
   pdf.save(filename);
 
@@ -179,10 +185,7 @@ async function exportOnePage(clone: HTMLElement, filename: string) {
   canvas.height = 1;
 }
 
-/**
- * Multi-page export. Pages are split at paragraph, row and signature boundaries. Left and
- * right edges are at full page width, so there are no side gaps on any page.
- */
+/** Legal and long-form documents: flows across pages with consistent margins. */
 async function exportFlowing(clone: HTMLElement, filename: string) {
   const { default: html2pdf } = await import("html2pdf.js");
 
@@ -231,19 +234,16 @@ export async function downloadDocumentPdf(element: HTMLElement, filename: string
 
   const paper =
     (element.matches(".doc-paper") ? element : element.querySelector<HTMLElement>(".doc-paper")) ?? element;
+  const financial = paper.classList.contains("doc-paper-financial");
 
   // Wait for signatures and seals before cloning, so the PDF never misses them.
   await waitForPrivateImages(paper);
 
-  const { host, clone } = createPrintHost(paper);
+  const { host, clone } = createPrintHost(paper, financial);
   try {
     await waitForImages(clone);
 
-    // The paper's own top and bottom padding applies to the first page only in a flowing
-    // export, so the multi-page path removes it and uses the page margin on every page instead.
-    const fitsOnOnePage = heightInMm(clone) <= PAGE_HEIGHT_MM - 2;
-
-    if (fitsOnOnePage) {
+    if (financial) {
       await exportOnePage(clone, filename);
     } else {
       clone.style.paddingTop = "0";
