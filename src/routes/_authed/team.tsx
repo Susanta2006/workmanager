@@ -3,7 +3,7 @@ import { deleteMemberAccount } from "@/lib/admin-fns";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Navigate, createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { backend } from "@/api/backend";
 import { fetchAll, fetchUsers, logActivity, pushNotification } from "@/lib/db";
 import { useAuth } from "@/lib/AuthContext";
+import { useOperatingMode } from "@/lib/virtual-team";
 import { usePermissions, ROLE_LABELS } from "@/lib/permissions";
 import { useOrgSettings } from "@/lib/org-settings";
 import { fetchWorkDivisions } from "@/lib/workforce";
@@ -46,8 +47,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authed/team")({
   head: () => ({ meta: [{ title: "Team · WorkManager" }] }),
-  component: TeamPage,
+  component: TeamRoute,
 });
+
+// In Solo mode the Team slot belongs to Virtual Team. The human Team page is kept intact for Team mode.
+function TeamRoute() {
+  const mode = useOperatingMode();
+  if (mode.isPending) return null;
+  if (mode.data?.operating_mode === "solo") return <Navigate to="/virtual-team" replace />;
+  return <TeamPage />;
+}
 
 const ROLE_HINTS = {
   admin: "Full access. Up to three approved admins. The founding admin alone can grant or revoke other admin roles.",

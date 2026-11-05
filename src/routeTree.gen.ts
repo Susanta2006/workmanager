@@ -31,6 +31,7 @@ import { Route as AuthedSalaryRouteImport } from './routes/_authed/salary'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedTasksRouteImport } from './routes/_authed/tasks'
 import { Route as AuthedTeamRouteImport } from './routes/_authed/team'
+import { Route as AuthedVirtualTeamRouteImport } from './routes/_authed/virtual-team'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthedClientsIndexRouteImport } from './routes/_authed/clients.index'
 import { Route as AuthedClientsClientIdRouteImport } from './routes/_authed/clients.$clientId'
@@ -46,6 +47,8 @@ import { Route as AuthedReportsProjectsRouteImport } from './routes/_authed/repo
 import { Route as AuthedReportsTasksRouteImport } from './routes/_authed/reports.tasks'
 import { Route as ApiAiChatRouteImport } from './routes/api/ai/chat'
 import { Route as ApiAiExecuteRouteImport } from './routes/api/ai/execute'
+import { Route as ApiVirtualTeamMessageRouteImport } from './routes/api/virtual-team/message'
+import { Route as ApiVirtualTeamWorkerRouteImport } from './routes/api/virtual-team/worker'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -156,6 +159,11 @@ const AuthedTeamRoute = AuthedTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedVirtualTeamRoute = AuthedVirtualTeamRouteImport.update({
+  id: '/virtual-team',
+  path: '/virtual-team',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
@@ -232,6 +240,16 @@ const ApiAiExecuteRoute = ApiAiExecuteRouteImport.update({
   path: '/api/ai/execute',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVirtualTeamMessageRoute = ApiVirtualTeamMessageRouteImport.update({
+  id: '/api/virtual-team/message',
+  path: '/api/virtual-team/message',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVirtualTeamWorkerRoute = ApiVirtualTeamWorkerRouteImport.update({
+  id: '/api/virtual-team/worker',
+  path: '/api/virtual-team/worker',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -255,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthedSettingsRoute
   '/tasks': typeof AuthedTasksRoute
   '/team': typeof AuthedTeamRoute
+  '/virtual-team': typeof AuthedVirtualTeamRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/clients/$clientId': typeof AuthedClientsClientIdRoute
   '/documents/$documentId': typeof AuthedDocumentsDocumentIdRoute
@@ -266,6 +285,8 @@ export interface FileRoutesByFullPath {
   '/reports/tasks': typeof AuthedReportsTasksRoute
   '/api/ai/chat': typeof ApiAiChatRoute
   '/api/ai/execute': typeof ApiAiExecuteRoute
+  '/api/virtual-team/message': typeof ApiVirtualTeamMessageRoute
+  '/api/virtual-team/worker': typeof ApiVirtualTeamWorkerRoute
   '/clients/': typeof AuthedClientsIndexRoute
   '/documents/': typeof AuthedDocumentsIndexRoute
   '/projects/': typeof AuthedProjectsIndexRoute
@@ -292,6 +313,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthedSettingsRoute
   '/tasks': typeof AuthedTasksRoute
   '/team': typeof AuthedTeamRoute
+  '/virtual-team': typeof AuthedVirtualTeamRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/clients/$clientId': typeof AuthedClientsClientIdRoute
   '/documents/$documentId': typeof AuthedDocumentsDocumentIdRoute
@@ -303,6 +325,8 @@ export interface FileRoutesByTo {
   '/reports/tasks': typeof AuthedReportsTasksRoute
   '/api/ai/chat': typeof ApiAiChatRoute
   '/api/ai/execute': typeof ApiAiExecuteRoute
+  '/api/virtual-team/message': typeof ApiVirtualTeamMessageRoute
+  '/api/virtual-team/worker': typeof ApiVirtualTeamWorkerRoute
   '/clients': typeof AuthedClientsIndexRoute
   '/documents': typeof AuthedDocumentsIndexRoute
   '/projects': typeof AuthedProjectsIndexRoute
@@ -332,6 +356,7 @@ export interface FileRoutesById {
   '/_authed/settings': typeof AuthedSettingsRoute
   '/_authed/tasks': typeof AuthedTasksRoute
   '/_authed/team': typeof AuthedTeamRoute
+  '/_authed/virtual-team': typeof AuthedVirtualTeamRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authed/clients/$clientId': typeof AuthedClientsClientIdRoute
   '/_authed/documents/$documentId': typeof AuthedDocumentsDocumentIdRoute
@@ -343,6 +368,8 @@ export interface FileRoutesById {
   '/_authed/reports/tasks': typeof AuthedReportsTasksRoute
   '/api/ai/chat': typeof ApiAiChatRoute
   '/api/ai/execute': typeof ApiAiExecuteRoute
+  '/api/virtual-team/message': typeof ApiVirtualTeamMessageRoute
+  '/api/virtual-team/worker': typeof ApiVirtualTeamWorkerRoute
   '/_authed/clients/': typeof AuthedClientsIndexRoute
   '/_authed/documents/': typeof AuthedDocumentsIndexRoute
   '/_authed/projects/': typeof AuthedProjectsIndexRoute
@@ -372,6 +399,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/team'
+    | '/virtual-team'
     | '/auth/callback'
     | '/clients/$clientId'
     | '/documents/$documentId'
@@ -383,6 +411,8 @@ export interface FileRouteTypes {
     | '/reports/tasks'
     | '/api/ai/chat'
     | '/api/ai/execute'
+    | '/api/virtual-team/message'
+    | '/api/virtual-team/worker'
     | '/clients/'
     | '/documents/'
     | '/projects/'
@@ -409,6 +439,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/team'
+    | '/virtual-team'
     | '/auth/callback'
     | '/clients/$clientId'
     | '/documents/$documentId'
@@ -420,6 +451,8 @@ export interface FileRouteTypes {
     | '/reports/tasks'
     | '/api/ai/chat'
     | '/api/ai/execute'
+    | '/api/virtual-team/message'
+    | '/api/virtual-team/worker'
     | '/clients'
     | '/documents'
     | '/projects'
@@ -448,6 +481,7 @@ export interface FileRouteTypes {
     | '/_authed/settings'
     | '/_authed/tasks'
     | '/_authed/team'
+    | '/_authed/virtual-team'
     | '/auth/callback'
     | '/_authed/clients/$clientId'
     | '/_authed/documents/$documentId'
@@ -459,6 +493,8 @@ export interface FileRouteTypes {
     | '/_authed/reports/tasks'
     | '/api/ai/chat'
     | '/api/ai/execute'
+    | '/api/virtual-team/message'
+    | '/api/virtual-team/worker'
     | '/_authed/clients/'
     | '/_authed/documents/'
     | '/_authed/projects/'
@@ -481,6 +517,8 @@ export interface RootRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
   ApiAiChatRoute: typeof ApiAiChatRoute
   ApiAiExecuteRoute: typeof ApiAiExecuteRoute
+  ApiVirtualTeamMessageRoute: typeof ApiVirtualTeamMessageRoute
+  ApiVirtualTeamWorkerRoute: typeof ApiVirtualTeamWorkerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -639,6 +677,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedTeamRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/virtual-team': {
+      id: '/_authed/virtual-team'
+      path: '/virtual-team'
+      fullPath: '/virtual-team'
+      preLoaderRoute: typeof AuthedVirtualTeamRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -744,6 +789,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiExecuteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/virtual-team/message': {
+      id: '/api/virtual-team/message'
+      path: '/api/virtual-team/message'
+      fullPath: '/api/virtual-team/message'
+      preLoaderRoute: typeof ApiVirtualTeamMessageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/virtual-team/worker': {
+      id: '/api/virtual-team/worker'
+      path: '/api/virtual-team/worker'
+      fullPath: '/api/virtual-team/worker'
+      preLoaderRoute: typeof ApiVirtualTeamWorkerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -778,6 +837,7 @@ interface AuthedRouteChildren {
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedTasksRoute: typeof AuthedTasksRoute
   AuthedTeamRoute: typeof AuthedTeamRoute
+  AuthedVirtualTeamRoute: typeof AuthedVirtualTeamRoute
   AuthedClientsClientIdRoute: typeof AuthedClientsClientIdRoute
   AuthedDocumentsDocumentIdRoute: typeof AuthedDocumentsDocumentIdRoute
   AuthedDocumentsNewRoute: typeof AuthedDocumentsNewRoute
@@ -798,6 +858,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedTasksRoute: AuthedTasksRoute,
   AuthedTeamRoute: AuthedTeamRoute,
+  AuthedVirtualTeamRoute: AuthedVirtualTeamRoute,
   AuthedClientsClientIdRoute: AuthedClientsClientIdRoute,
   AuthedDocumentsDocumentIdRoute: AuthedDocumentsDocumentIdRoute,
   AuthedDocumentsNewRoute: AuthedDocumentsNewRoute,
@@ -826,6 +887,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
   ApiAiChatRoute: ApiAiChatRoute,
   ApiAiExecuteRoute: ApiAiExecuteRoute,
+  ApiVirtualTeamMessageRoute: ApiVirtualTeamMessageRoute,
+  ApiVirtualTeamWorkerRoute: ApiVirtualTeamWorkerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -3,6 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
+  Bot,
   LogOut,
   Menu,
   PanelLeftClose,
@@ -18,6 +19,7 @@ import { useOrgSettings } from "@/lib/org-settings";
 import { refreshWorkspaceData } from "@/lib/sync";
 import { countUnreadNotifications } from "@/lib/db";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
+import { useOperatingMode } from "@/lib/virtual-team";
 import GlobalSearch from "@/components/layout/GlobalSearch";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -110,7 +112,18 @@ export default function AppShell({ children }: any) {
     operation?.catch((error: unknown) => console.warn("Could not update the installed-app badge.", error));
   }, [unread.data, unread.isSuccess, user]);
 
-  const items = NAV_ITEMS.filter((item) => can(item.key));
+  // Solo mode: the Team slot becomes Virtual Team. Team mode: the human Team entry is unchanged.
+  // Permission is still checked against the existing "team" key, so no permission rules change.
+  const virtualMode = useOperatingMode();
+  const soloMode = virtualMode.data?.operating_mode === "solo";
+  const navSource = soloMode
+    ? NAV_ITEMS.map((item) =>
+        item.key === "team"
+          ? { ...item, label: "Virtual Team", to: "/virtual-team", icon: Bot }
+          : item,
+      )
+    : NAV_ITEMS;
+  const items = navSource.filter((item) => can(item.key));
   const current = items.find((item) =>
     pathname.startsWith(item.to),
   );
