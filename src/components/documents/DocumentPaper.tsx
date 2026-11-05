@@ -49,7 +49,7 @@ export default function DocumentPaper({ doc, client, project, settings, ledger =
   const companyName = documentSettings.company_name || "";
 
   return (
-    <div className="doc-paper mx-auto" data-print-area>
+    <div className={`doc-paper mx-auto${isInvoice || isReceipt ? " doc-paper-financial" : ""}`} data-print-area>
       <div className="avoid-break flex items-start justify-between gap-6 border-b border-slate-200 pb-5">
         <div className="flex items-start gap-3">
           {documentSettings.logo_url && (
