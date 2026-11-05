@@ -1,19 +1,18 @@
 /**
  * Exports a document paper to PDF.
  *
- * - Invoices and payment receipts: rendered as ONE A4 page. The whole page is scaled
- *   uniformly to fit, so nothing is cut off and the proportions stay the same.
- * - Legal and long-form documents: flow across as many A4 pages as needed, with the same
- *   top and bottom margin on every page. Paragraphs, table rows and signature blocks are
- *   never split across a page break.
+ * The paper is always exported at its full preview width (210 mm), so the left and right
+ * edges match the preview. Nothing is ever shrunk to fit:
+ *   - A document that fits at full width goes on ONE A4 page (invoices and receipts).
+ *   - A longer document flows onto additional A4 pages, breaking only between paragraphs,
+ *     table rows and signature blocks, with the same top and bottom margin on every page.
  */
 
 /** A4 at 96 dpi. The paper is laid out at this width, the same as the preview. */
 const PAPER_WIDTH_PX = 794;
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
-const SINGLE_PAGE_MARGIN_MM = 7;
-const MULTI_PAGE_MARGIN_MM = 12;
+const PAGE_MARGIN_MM = 12;     // top and bottom, applied to every page of a multi-page export
 const CAPTURE_SCALE = 3;
 
 /** Waits for PrivateImage wrappers (signatures, seals) to finish loading their signed URLs. */
@@ -49,9 +48,9 @@ function waitForPrivateImages(paper: HTMLElement): Promise<void> {
 /** Waits until every image in the clone has loaded and decoded. */
 async function waitForImages(root: HTMLElement): Promise<void> {
   await Promise.all(Array.from(root.querySelectorAll("img")).map(async (img) => {
+    const label = img.alt || "embedded image";
     if (!img.complete) {
       await new Promise<void>((resolve, reject) => {
-        const label = img.alt || "embedded image";
         const timeout = window.setTimeout(() => {
           cleanup();
           reject(new Error(`Timed out loading document image: ${label}`));
@@ -68,10 +67,10 @@ async function waitForImages(root: HTMLElement): Promise<void> {
       });
     }
     if (typeof img.decode === "function") {
-      try { await img.decode(); } catch { throw new Error(`A document image could not be decoded: ${img.alt || "embedded image"}`); }
+      try { await img.decode(); } catch { throw new Error(`A document image could not be decoded: ${label}`); }
     }
     if (!img.naturalWidth || !img.naturalHeight) {
-      throw new Error(`A document image is unavailable: ${img.alt || "embedded image"}`);
+      throw new Error(`A document image is unavailable: ${label}`);
     }
   }));
 }
@@ -105,8 +104,11 @@ function keepParagraphsWhole(paper: HTMLElement) {
   });
 }
 
-/** Creates an off-screen host at the paper's exact layout width, holding a clone of the paper. */
-function createPrintHost(paper: HTMLElement, singlePage: boolean): { host: HTMLDivElement; clone: HTMLElement } {
+/**
+ * Off-screen host at the paper's exact layout width, holding a clone of the paper.
+ * The clone keeps the paper's own left and right padding so the text inset matches the preview.
+ */
+function createPrintHost(paper: HTMLElement): { host: HTMLDivElement; clone: HTMLElement } {
   const host = document.createElement("div");
   host.setAttribute("aria-hidden", "true");
   Object.assign(host.style, {
@@ -124,6 +126,7 @@ function createPrintHost(paper: HTMLElement, singlePage: boolean): { host: HTMLD
   Object.assign(clone.style, {
     width: `${PAPER_WIDTH_PX}px`,
     maxWidth: `${PAPER_WIDTH_PX}px`,
+    boxSizing: "border-box",
     margin: "0",
     boxShadow: "none",
     borderRadius: "0",
@@ -132,31 +135,21 @@ function createPrintHost(paper: HTMLElement, singlePage: boolean): { host: HTMLD
     background: "#ffffff",
   });
 
-  if (!singlePage) {
-    // html2pdf applies the top and bottom margin on every page. The paper's own vertical
-    // padding would only appear on the first page, so it is removed here. Left and right
-    // padding stays, so the text keeps its inset on every page.
-    clone.style.paddingTop = "0";
-    clone.style.paddingBottom = "0";
-    keepParagraphsWhole(clone);
-  }
-
   host.appendChild(clone);
   document.body.appendChild(host);
   return { host, clone };
 }
 
-/** Invoices and receipts: one A4 page, scaled as a whole so nothing is cropped. */
-async function exportSinglePage(clone: HTMLElement, filename: string) {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import("html2canvas"),
-    import("jspdf"),
-  ]);
+/** Height of the paper in millimetres when it is laid out at full page width. */
+function heightInMm(clone: HTMLElement): number {
+  return clone.getBoundingClientRect().height * (PAGE_WIDTH_MM / PAPER_WIDTH_PX);
+}
 
-  // Wait for web fonts so line wrapping is measured with the final fonts.
+/** Captures the paper once at full width. Used for the one-page case. */
+async function captureCanvas(clone: HTMLElement) {
+  const { default: html2canvas } = await import("html2canvas");
   if ("fonts" in document) await document.fonts.ready;
-
-  const canvas = await html2canvas(clone, {
+  return html2canvas(clone, {
     scale: CAPTURE_SCALE,
     useCORS: true,
     backgroundColor: "#ffffff",
@@ -166,33 +159,36 @@ async function exportSinglePage(clone: HTMLElement, filename: string) {
     scrollX: 0,
     scrollY: 0,
   });
+}
+
+/**
+ * One A4 page. The paper is placed at full page width, so its left and right edges line up
+ * with the page edges exactly as they do in the preview. Only the bottom is blank if the
+ * paper is shorter than the page.
+ */
+async function exportOnePage(clone: HTMLElement, filename: string) {
+  const { jsPDF } = await import("jspdf");
+  const canvas = await captureCanvas(clone);
 
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-  const availableWidth = PAGE_WIDTH_MM - SINGLE_PAGE_MARGIN_MM * 2;
-  const availableHeight = PAGE_HEIGHT_MM - SINGLE_PAGE_MARGIN_MM * 2;
-  // Uniform scale: the smaller of the width and height fits, so proportions never change.
-  const fit = Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
-  const renderWidth = canvas.width * fit;
-  const renderHeight = canvas.height * fit;
-  const x = (PAGE_WIDTH_MM - renderWidth) / 2;
-  const y = (PAGE_HEIGHT_MM - renderHeight) / 2;
-
-  // PNG keeps text edges sharp; JPEG softens small type.
-  pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, y, renderWidth, renderHeight, undefined, "SLOW");
+  const renderHeight = (canvas.height * PAGE_WIDTH_MM) / canvas.width;
+  pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, PAGE_WIDTH_MM, renderHeight, undefined, "SLOW");
   pdf.save(filename);
 
   canvas.width = 1;
   canvas.height = 1;
 }
 
-/** Legal and long-form documents: flows across pages with consistent margins. */
-async function exportMultiPage(clone: HTMLElement, filename: string) {
+/**
+ * Multi-page export. Pages are split at paragraph, row and signature boundaries. Left and
+ * right edges are at full page width, so there are no side gaps on any page.
+ */
+async function exportFlowing(clone: HTMLElement, filename: string) {
   const { default: html2pdf } = await import("html2pdf.js");
 
   const options: Record<string, unknown> = {
-    // [top, left, bottom, right] in mm. Top and bottom apply to every page. Left and right
-    // are 0 because the paper's own horizontal padding already insets the text.
-    margin: [MULTI_PAGE_MARGIN_MM, 0, MULTI_PAGE_MARGIN_MM, 0],
+    // [top, left, bottom, right] in mm. The top and bottom margin repeat on every page.
+    margin: [PAGE_MARGIN_MM, 0, PAGE_MARGIN_MM, 0],
     filename,
     image: { type: "png" },
     html2canvas: {
@@ -235,19 +231,25 @@ export async function downloadDocumentPdf(element: HTMLElement, filename: string
 
   const paper =
     (element.matches(".doc-paper") ? element : element.querySelector<HTMLElement>(".doc-paper")) ?? element;
-  const singlePage = paper.classList.contains("doc-paper-financial");
 
   // Wait for signatures and seals before cloning, so the PDF never misses them.
   await waitForPrivateImages(paper);
 
-  const { host, clone } = createPrintHost(paper, singlePage);
+  const { host, clone } = createPrintHost(paper);
   try {
     await waitForImages(clone);
 
-    if (singlePage) {
-      await exportSinglePage(clone, filename);
+    // The paper's own top and bottom padding applies to the first page only in a flowing
+    // export, so the multi-page path removes it and uses the page margin on every page instead.
+    const fitsOnOnePage = heightInMm(clone) <= PAGE_HEIGHT_MM - 2;
+
+    if (fitsOnOnePage) {
+      await exportOnePage(clone, filename);
     } else {
-      await exportMultiPage(clone, filename);
+      clone.style.paddingTop = "0";
+      clone.style.paddingBottom = "0";
+      keepParagraphsWhole(clone);
+      await exportFlowing(clone, filename);
     }
   } finally {
     host.remove();
