@@ -273,17 +273,16 @@ export default function AppShell({ children }: any) {
         <MobileTabBar
           items={items}
           pathname={pathname}
-          onMore={() => setMobileOpen(true)}
         />
       </div>
     </div>
   );
 }
 
-const MOBILE_KEYS = ["dashboard", "clients", "documents", "reports"];
+const MOBILE_KEYS = ["dashboard", "clients", "documents", "reports", "team"];
 
-/** Bottom tab bar for phones — the four everyday destinations plus everything else. */
-function MobileTabBar({ items, pathname, onMore }: any) {
+/** Bottom tab bar for phones: Overview, Clients, Documents, Reports and Team (Virtual Team in Solo mode). */
+function MobileTabBar({ items, pathname }: any) {
   const tabs = MOBILE_KEYS.map((key) =>
     items.find((item: any) => item.key === key),
   ).filter(Boolean);
@@ -310,14 +309,6 @@ function MobileTabBar({ items, pathname, onMore }: any) {
           </Link>
         );
       })}
-      <button
-        type="button"
-        onClick={onMore}
-        className="flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-muted-foreground"
-      >
-        <Menu className="h-[18px] w-[18px]" />
-        <span>More</span>
-      </button>
     </nav>
   );
 }
