@@ -231,12 +231,12 @@ create or replace function public.vt_protect_manager() returns trigger
 language plpgsql set search_path = public as $$
 begin
   if tg_op = 'DELETE' and old.is_manager then
-    raise exception 'Manager AI cannot be removed.' using errcode = '55000';
+    raise exception 'Manager cannot be removed.' using errcode = '55000';
   end if;
   if tg_op = 'UPDATE' and old.is_manager and (
        new.is_manager is distinct from old.is_manager
     or new.member_key is distinct from old.member_key) then
-    raise exception 'Manager AI identity is fixed.' using errcode = '55000';
+    raise exception 'Manager identity is fixed.' using errcode = '55000';
   end if;
   return coalesce(new, old);
 end $$;
@@ -325,7 +325,7 @@ language sql security definer set search_path = public as $$
 $$;
 revoke all on function public.vt_audit(uuid, text, text, text, jsonb) from public, anon;
 
--- ===== Bootstrap: settings, six employees, Manager AI and the team chat (idempotent) =====
+-- ===== Bootstrap: settings, six employees, Manager and the team chat (idempotent) =====
 create or replace function public.virtual_team_bootstrap() returns void
 language plpgsql security definer set search_path = public as $$
 declare
@@ -343,7 +343,7 @@ begin
     (organization_id, member_key, display_name, job_title, role_description, gender,
      personality, communication_style, skills, is_manager, created_by)
   values
-    (org, 'manager', 'Manager AI', 'Virtual CEO',
+    (org, 'manager', 'Manager', 'Virtual CEO',
      'Understands the Admin''s instructions, plans missions, delegates to the right employees, reviews their work and reports back.',
      'neutral',
      'Calm, decisive and organised. Asks for clarity before committing the team to expensive work.',

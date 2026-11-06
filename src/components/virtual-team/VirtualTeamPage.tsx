@@ -30,7 +30,7 @@ import {
 } from "@/lib/virtual-team";
 import ChatPanel from "./ChatPanel";
 import PromptLibrary from "./PromptLibrary";
-import { Avatar, downloadText, formatMoney, formatTime, OperatingModeSwitch, StatusBadge } from "./shared";
+import { Avatar, downloadText, formatMoney, formatTime, OperatingModeNotice, StatusBadge } from "./shared";
 
 export default function VirtualTeamPage() {
   const { canManageSettings } = usePermissions();
@@ -57,13 +57,13 @@ export default function VirtualTeamPage() {
     <div>
       <PageHeader
         title="Virtual Team"
-        description="Manager AI and your AI employees. Give instructions in the team chat, follow missions, and keep the Prompt Library."
+        description="Manager and your AI employees. Give instructions in the team chat, follow missions, and keep the Prompt Library."
       />
 
-      <OperatingModeSwitch />
+      <OperatingModeNotice />
 
       <Tabs defaultValue="chat">
-        <TabsList className="mb-4 flex w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+        <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
           <TabsTrigger value="chat" className="rounded-full border border-border data-[state=active]:bg-blue-50">Chat</TabsTrigger>
           <TabsTrigger value="missions" className="rounded-full border border-border data-[state=active]:bg-blue-50">Missions</TabsTrigger>
           <TabsTrigger value="prompts" className="rounded-full border border-border data-[state=active]:bg-blue-50">Prompt Library</TabsTrigger>
@@ -147,10 +147,10 @@ function Directory({
           chatWith === null ? "border-blue-300 bg-blue-50/60" : "border-border bg-card hover:bg-muted/40"
         }`}
       >
-        <Avatar name="Manager AI" seed="manager" size="sm" />
+        <Avatar name="Manager" seed="manager" size="sm" />
         <span className="min-w-0">
           <span className="block text-[13px] font-medium text-foreground">Team chat</span>
-          <span className="block text-[11.5px] text-muted-foreground">Manager AI and the team</span>
+          <span className="block text-[11.5px] text-muted-foreground">Manager and the team</span>
         </span>
       </button>
 
@@ -236,7 +236,7 @@ function MissionsPanel() {
   if (list.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-border p-8 text-center text-[12.5px] text-muted-foreground">
-        No missions yet. Ask Manager AI for work in the team chat, and it will appear here.
+        No missions yet. Ask Manager for work in the team chat, and it will appear here.
       </p>
     );
   }

@@ -144,7 +144,7 @@ export default function PromptLibrary() {
           <p className="text-[12.5px] text-muted-foreground">Loading the Prompt Library…</p>
         ) : all.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border p-6 text-center text-[12.5px] text-muted-foreground">
-            No prompts yet. Ask Manager AI to have the Prompt Engineer create a collection, for example “Manager, ask the Prompt Engineer to create prompts for the education niche.”
+            No prompts yet. Ask Manager to have the Prompt Engineer create a collection, for example “Manager, ask the Prompt Engineer to create prompts for the education niche.”
           </p>
         ) : filtered.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border p-6 text-center text-[12.5px] text-muted-foreground">

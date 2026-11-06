@@ -19,7 +19,7 @@ import { backend } from "@/api/backend";
 import { fetchAll, fetchUsers, logActivity, pushNotification } from "@/lib/db";
 import { useAuth } from "@/lib/AuthContext";
 import { useOperatingMode } from "@/lib/virtual-team";
-import { OperatingModeSwitch } from "@/components/virtual-team/shared";
+import { OperatingModeNotice } from "@/components/virtual-team/shared";
 import { usePermissions, ROLE_LABELS } from "@/lib/permissions";
 import { useOrgSettings } from "@/lib/org-settings";
 import { fetchWorkDivisions } from "@/lib/workforce";
@@ -317,7 +317,7 @@ function TeamPage() {
         )}
       </PageHeader>
 
-      <OperatingModeSwitch />
+      <OperatingModeNotice />
 
       <WorkDivisionManager
         user={(data?.users || []).find((member: any) => member.id === user?.id) || null}

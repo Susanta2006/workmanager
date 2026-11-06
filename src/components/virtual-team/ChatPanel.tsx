@@ -208,7 +208,7 @@ export default function ChatPanel({ members, chatWith, onChatWithChange }: Props
           </button>
         )}
         {isGroup ? (
-          <Avatar name="Manager AI" seed="manager" />
+          <Avatar name="Manager" seed="manager" />
         ) : (
           <Avatar name={target!.display_name} seed={target!.member_key} />
         )}
@@ -217,7 +217,7 @@ export default function ChatPanel({ members, chatWith, onChatWithChange }: Props
             {isGroup ? "Team chat" : target!.display_name}
           </p>
           <p className="truncate text-[11.5px] text-muted-foreground">
-            {isGroup ? "Manager AI and the team" : target!.job_title}
+            {isGroup ? "Manager and the team" : target!.job_title}
           </p>
         </div>
         {isAdmin && conversation && (
@@ -261,7 +261,7 @@ export default function ChatPanel({ members, chatWith, onChatWithChange }: Props
         ) : (messages.data ?? []).length === 0 ? (
           <p className="py-10 text-center text-[12.5px] text-muted-foreground">
             {isGroup
-              ? "No messages yet. Ask Manager AI for something, or mention an employee with @name."
+              ? "No messages yet. Ask Manager for something, or mention an employee with @name."
               : `No messages with ${target!.display_name} yet.`}
           </p>
         ) : (
@@ -279,7 +279,7 @@ export default function ChatPanel({ members, chatWith, onChatWithChange }: Props
               message.sender_kind === "admin"
                 ? { name: mine ? "You" : "Admin", seed: "admin" }
                 : message.sender_kind === "manager"
-                  ? { name: "Manager AI", seed: "manager" }
+                  ? { name: "Manager", seed: "manager" }
                   : message.sender_kind === "member"
                     ? { name: member?.display_name ?? "Team member", seed: member?.member_key ?? "member" }
                     : { name: "Member", seed: "member" };
@@ -355,7 +355,7 @@ export default function ChatPanel({ members, chatWith, onChatWithChange }: Props
             onKeyDown={onKeyDown}
             rows={2}
             maxLength={4000}
-            placeholder={isGroup ? "Message Manager AI, or type @name to ask an employee" : `Message ${target!.display_name}`}
+            placeholder={isGroup ? "Message Manager, or type @name to ask an employee" : `Message ${target!.display_name}`}
             className="min-h-[44px] resize-none text-[13px]"
             disabled={sending}
           />

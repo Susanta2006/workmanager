@@ -20,6 +20,7 @@ import PrivateImage from "@/components/common/PrivateImage";
 import PageHeader from "@/components/common/PageHeader";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { requestAccountDeletion } from "@/lib/account";
+import { ACTIVE_MISSION_STATUSES, fetchMissions } from "@/lib/virtual-team";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,7 +57,29 @@ function SettingsPage() {
   const set = (key: any) => (value: any) =>
     setForm((prev: any) => ({ ...prev, [key]: value }));
 
+  const [modeDialog, setModeDialog] = useState<{ active: number; next: string } | null>(null);
+
+  // Business type is the single control for Solo/Team, including the Virtual Team.
   const save = async () => {
+    const savedMode = settings.business_type || "solo";
+    const nextMode = form.business_type || "solo";
+    if (savedMode !== nextMode) {
+      try {
+        const missions = await fetchMissions();
+        const active = missions.filter((mission) => ACTIVE_MISSION_STATUSES.includes(mission.status)).length;
+        if (active > 0) {
+          setModeDialog({ active, next: nextMode });
+          return;
+        }
+      } catch (error: any) {
+        toast.error(error?.message || "Could not check active missions. Settings were not saved.");
+        return;
+      }
+    }
+    await persist();
+  };
+
+  const persist = async () => {
     setSaving(true);
     try {
       // The company name is fixed at registration, so it is never written from this form.
@@ -79,6 +102,8 @@ function SettingsPage() {
       toast.success("Settings saved");
       await refetch();
       queryClient.invalidateQueries({ queryKey: ["org-settings"] });
+      // The mode is mirrored into the Virtual Team by the database, so its views must refresh too.
+      queryClient.invalidateQueries({ queryKey: ["virtual-team"] });
     } catch (error: any) {
       toast.error(error?.message || "Could not save settings.");
     } finally {
@@ -246,6 +271,9 @@ function SettingsPage() {
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   Solo workspaces have only the admin. Team workspaces add
                   members, and only the admin can approve them.
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  This setting also controls Virtual Team. Solo shows Virtual Team in place of Team. Team restores the Team page.
                 </p>
               </div>
               <TextField
@@ -473,6 +501,28 @@ function SettingsPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={Boolean(modeDialog)}
+        onOpenChange={(open: boolean) => {
+          if (!open) setModeDialog(null);
+        }}
+        title={modeDialog?.next === "solo" ? "Switch to Solo?" : "Switch to Team?"}
+        description={
+          modeDialog
+            ? `${modeDialog.active} mission${modeDialog.active === 1 ? " is" : "s are"} active. ${
+                modeDialog.next === "solo"
+                  ? "Virtual Team takes the Team place in the menu and the daily briefing runs in the background."
+                  : "Virtual Team leaves the menu and the Team page returns. Missions already running finish, and no new missions start on their own."
+              } Chat history and missions are kept.`
+            : ""
+        }
+        confirmLabel={modeDialog?.next === "solo" ? "Switch to Solo" : "Switch to Team"}
+        onConfirm={async () => {
+          setModeDialog(null);
+          await persist();
+        }}
+      />
 
       <AccountDeletionSection />
     </div>

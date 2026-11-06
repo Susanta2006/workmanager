@@ -1,17 +1,6 @@
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import ConfirmDialog from "@/components/common/ConfirmDialog";
-import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 import { usePermissions } from "@/lib/permissions";
-import {
-  ACTIVE_MISSION_STATUSES,
-  fetchMissions,
-  setOperatingMode,
-  useOperatingMode,
-  type Member,
-  type OperatingMode,
-} from "@/lib/virtual-team";
+import { useOperatingMode, type Member, type OperatingMode } from "@/lib/virtual-team";
 
 const AVATAR_TONES = [
   "bg-blue-100 text-blue-700",
@@ -99,71 +88,27 @@ export function nameOf(members: Member[], id: string | null | undefined, fallbac
   return members.find((member) => member.id === id)?.display_name ?? fallback;
 }
 
-/** Shown on the Team page and the Virtual Team page so the admin can switch modes from either place. */
-export function OperatingModeSwitch() {
+/** Read-only. Shows the operating mode that Settings controls, with a link to change it there. */
+export function OperatingModeNotice() {
   const { canManageSettings } = usePermissions();
-  const queryClient = useQueryClient();
   const settings = useOperatingMode();
-  const mode: OperatingMode = settings.data?.operating_mode ?? "team";
-  const next: OperatingMode = mode === "solo" ? "team" : "solo";
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const missions = useQuery({
-    queryKey: ["virtual-team", "missions"],
-    queryFn: fetchMissions,
-    enabled: open,
-  });
-  const activeCount = (missions.data ?? []).filter((mission) => ACTIVE_MISSION_STATUSES.includes(mission.status)).length;
-
-  async function confirmSwitch() {
-    setBusy(true);
-    try {
-      await setOperatingMode(next);
-      await queryClient.invalidateQueries({ queryKey: ["virtual-team"] });
-      toast.success(next === "solo" ? "Solo mode is on. Virtual Team is now in the menu." : "Team mode is on.");
-      setOpen(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "The mode could not be changed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  const mode: OperatingMode = settings.data?.operating_mode ?? "solo";
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/80 px-4 py-3">
-      <div className="min-w-0">
-        <p className="text-[12.5px] font-semibold text-foreground">
-          Operating mode: {mode === "solo" ? "Solo" : "Team"}
-        </p>
-        <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
-          {mode === "solo"
-            ? "Virtual Team is your main workspace. Manager AI works with the employees and the daily briefing runs in the background."
-            : "The Team page manages your people. Virtual Team starts only when you switch to Solo, and no new missions start on their own."}
-        </p>
-      </div>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card px-4 py-3 text-[12.5px] text-slate-600">
+      <p>
+        <span className="font-medium text-slate-800">Operating mode: {mode === "solo" ? "Solo" : "Team"}.</span>{" "}
+        {mode === "solo"
+          ? "Virtual Team is your main workspace."
+          : "Virtual Team is off. The Team page manages your people."}
+      </p>
       {canManageSettings && (
-        <Button size="sm" variant="outline" onClick={() => setOpen(true)} disabled={settings.isLoading}>
-          Switch to {next === "solo" ? "Solo" : "Team"}
-        </Button>
+        <Link
+          to="/settings"
+          className="inline-flex h-8 items-center rounded-md border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
+        >
+          Change in Settings
+        </Link>
       )}
-      <ConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={`Switch to ${next === "solo" ? "Solo" : "Team"} mode?`}
-        description={
-          <span>
-            {next === "solo"
-              ? "Virtual Team replaces the Team menu item. The Team page moves to Virtual Team › Settings › Team & access. "
-              : "The Team page returns to the menu and Virtual Team is hidden. "}
-            {activeCount > 0
-              ? `${activeCount} mission${activeCount === 1 ? "" : "s"} ${activeCount === 1 ? "is" : "are"} active. Missions that are already running or approved keep going. Nothing is deleted.`
-              : "No missions are active, so nothing will be interrupted. Nothing is deleted."}
-          </span>
-        }
-        confirmLabel={`Switch to ${next === "solo" ? "Solo" : "Team"}`}
-        onConfirm={confirmSwitch}
-        busy={busy}
-      />
     </div>
   );
 }

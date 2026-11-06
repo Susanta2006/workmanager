@@ -24,7 +24,7 @@ const TICK_TASK_LIMIT = 2;
 const TICK_BUDGET_MS = 35_000;
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);
 const DEFAULT_SETTINGS = {
-  operating_mode: "team" as "solo" | "team",
+  operating_mode: "solo" as "solo" | "team",
   background_enabled: true,
   max_concurrent_missions: 3,
   mission_token_budget: 8000,
@@ -204,7 +204,7 @@ async function loadHistory(admin: any, conversationId: string, members: MemberRo
           ? "Team member"
           : row.sender_kind === "system"
             ? "System"
-            : byId.get(row.sender_member_id)?.display_name ?? "Manager AI";
+            : byId.get(row.sender_member_id)?.display_name ?? "Manager";
     return { speaker, body: row.body };
   });
 }
@@ -304,7 +304,7 @@ async function planWithManager(roster: MemberRow[], history: HistoryLine[], canC
     .filter((member) => !member.is_manager && member.active)
     .map((member) => `- ${member.member_key}: ${member.display_name}, ${member.job_title}. ${member.role_description}`)
     .join("\n");
-  const system = `You are Manager AI, the Virtual CEO of Shristi AI Web Creations. You coordinate the employees for the Admin (the owner).
+  const system = `You are Manager, the Virtual CEO of Shristi AI Web Creations. You coordinate the employees for the Admin (the owner).
 Roster (use member_key exactly):
 ${members}
 
@@ -426,7 +426,7 @@ async function financeBlock(admin: any, organizationId: string) {
   return `Company figures from the records (calculated, not estimated):\n${JSON.stringify(summary, null, 2)}`;
 }
 
-// ===== Message endpoint: the Admin or a member talks to Manager AI or an employee =====
+// ===== Message endpoint: the Admin or a member talks to Manager or an employee =====
 
 /**
  * Reads the city from the Manager's instruction first, then the Admin's request ("... in Agartala ...").
@@ -597,7 +597,7 @@ async function buildReport(admin: any, organizationId: string, members: MemberRo
     [
       {
         role: "system",
-        content: "You are Manager AI briefing the Admin. Using only the mission records below, write a briefing: what was delivered, key findings, disagreements and how they were settled, open questions, and missing information. Name who said what. Do not add facts that are not in the records. Plain text, under 300 words.",
+        content: "You are Manager briefing the Admin. Using only the mission records below, write a briefing: what was delivered, key findings, disagreements and how they were settled, open questions, and missing information. Name who said what. Do not add facts that are not in the records. Plain text, under 300 words.",
       },
       { role: "user", content: `Admin asked: ${requestText}\n\n${records}` },
     ],
@@ -699,7 +699,7 @@ export async function handleVirtualTeamMessage(request: Request): Promise<Respon
     return json({ conversation_id: groupId, messages: [userMessage, ...replies] });
   }
 
-  // Admin asks for a report: Manager AI briefs from the stored mission records.
+  // Admin asks for a report: Manager briefs from the stored mission records.
   if (isAdmin && REPORT_REQUEST.test(text)) {
     const briefing = await buildReport(admin, organizationId, members, text);
     await addUsage(admin, organizationId, briefing.tokens);
@@ -713,7 +713,7 @@ export async function handleVirtualTeamMessage(request: Request): Promise<Respon
     return json({ conversation_id: groupId, messages: [userMessage, managerMessage] });
   }
 
-  // Otherwise Manager AI decides how to respond.
+  // Otherwise Manager decides how to respond.
   const history = await loadHistory(admin, groupId, members, 12);
   const plan = await planWithManager(members, history, canCommand);
   await addUsage(admin, organizationId, plan.tokens);

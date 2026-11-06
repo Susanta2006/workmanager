@@ -115,7 +115,7 @@ export type Settings = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  operating_mode: "team",
+  operating_mode: "solo",
   background_enabled: true,
   max_concurrent_missions: 3,
   mission_token_budget: 8000,
@@ -132,7 +132,7 @@ async function authHeaders() {
   };
 }
 
-/** Opens the Virtual Team for this company: settings, the seeded employees, Manager AI and the team chat. */
+/** Opens the Virtual Team for this company: settings, the seeded employees, Manager and the team chat. */
 export async function bootstrapVirtualTeam() {
   const { error } = await getSupabase().rpc("virtual_team_bootstrap");
   if (error) throw error;
@@ -140,7 +140,7 @@ export async function bootstrapVirtualTeam() {
 
 /**
  * The saved operating mode. Read-only and does not create anything, so it is safe to call from the
- * app shell on every page. Defaults to Team until the Admin switches.
+ * app shell on every page. Settings → Business type is the only control; Solo is the default.
  */
 export function useOperatingMode() {
   return useQuery({
@@ -271,12 +271,6 @@ export async function reviewMission(missionId: string, action: "approve" | "paus
 }
 
 /** Admin only, audited. The only way to change the mode. */
-export async function setOperatingMode(mode: OperatingMode) {
-  const { data, error } = await getSupabase().rpc("virtual_team_set_mode", { p_mode: mode });
-  if (error) throw error;
-  return String(data);
-}
-
 /** Admin only. Budgets and background switches; the mode has its own audited call. */
 export async function saveSettings(patch: Partial<Omit<Settings, "operating_mode">>) {
   const supabase = getSupabase();
