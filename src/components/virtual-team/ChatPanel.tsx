@@ -29,6 +29,11 @@ type Props = {
   onChatWithChange: (memberId: string | null) => void;
 };
 
+// Shows plain text cleanly on phones: removes markdown bold and heading markers.
+function cleanBody(text: string) {
+  return text.replace(/\*\*/g, "").replace(/^#{1,6}\s*/gm, "").replace(/^\s*\*\s+/gm, "• ");
+}
+
 export default function ChatPanel({ members, chatWith, onChatWithChange }: Props) {
   const { user } = useAuth();
   const { canManageTeam } = usePermissions();
@@ -190,7 +195,7 @@ export default function ChatPanel({ members, chatWith, onChatWithChange }: Props
   }
 
   return (
-    <div className="flex min-h-[560px] flex-col overflow-hidden rounded-xl border border-border bg-card">
+    <div className="flex h-[calc(100dvh-13rem)] min-h-[420px] flex-col overflow-hidden rounded-xl border border-border bg-card lg:h-auto lg:min-h-[560px]">
       <header className="flex items-center gap-3 border-b border-border px-4 py-3">
         {!isGroup && (
           <button
@@ -264,7 +269,7 @@ export default function ChatPanel({ members, chatWith, onChatWithChange }: Props
             if (message.sender_kind === "system") {
               return (
                 <p key={message.id} className="text-center text-[11.5px] text-muted-foreground">
-                  {message.body}
+                  {cleanBody(message.body)}
                 </p>
               );
             }
@@ -301,7 +306,7 @@ export default function ChatPanel({ members, chatWith, onChatWithChange }: Props
                       mine ? "bg-blue-600 text-white" : "bg-muted text-foreground"
                     }`}
                   >
-                    {message.body}
+                    {cleanBody(message.body)}
                   </div>
                 </div>
               </div>

@@ -14,6 +14,12 @@ const PLAN_MAX_TOKENS = 900;
 const REPLY_MAX_TOKENS = 700;
 const TASK_MAX_TOKENS = 1200;
 const REVIEW_MAX_TOKENS = 700;
+const REPORT_MAX_TOKENS = 900;
+const SEARCH_MAX_TOKENS = 1200;
+// Employees allowed to research the web and Google Maps. Everyone else works from what the Admin supplied.
+const RESEARCH_KEYS = new Set(["local-scout"]);
+// Only an explicit request from the Admin triggers a written briefing.
+const REPORT_REQUEST = /\b(report|summary|summari[sz]e|briefing|brief me)\b/i;
 const TICK_TASK_LIMIT = 2;
 const TICK_BUDGET_MS = 35_000;
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);
@@ -274,7 +280,9 @@ Rules:
 - Use only facts from the conversation or figures supplied to you. Never invent names, phone numbers, emails, websites, ratings, prices, audit results or financial records. Say "unknown" when something is missing.
 - Separate verified facts from inference. If information is missing, ask the Admin one direct question.
 - If you disagree with a colleague or the plan, say so respectfully and give your evidence. Do not disagree just to disagree.
-- You can only produce written work here. Never say you sent emails, contacted anyone, published anything or ran tests you did not run.`;
+- You can only produce written work here. Never say you sent emails, contacted anyone, published anything or ran tests you did not run.
+- You have no internet, maps, business directory or search access. Never list businesses, phone numbers, review counts, ratings, websites or links unless the Admin supplied them in this conversation. If asked to find leads, say you cannot search, and ask the Admin to supply the list or a source.
+- Do not write a report, summary or briefing unless the Admin asks for one. Keep your reply to your assigned work.`;
 }
 
 function transcript(history: HistoryLine[]) {
@@ -420,6 +428,184 @@ async function financeBlock(admin: any, organizationId: string) {
 
 // ===== Message endpoint: the Admin or a member talks to Manager AI or an employee =====
 
+/**
+ * Reads the city from the Manager's instruction first, then the Admin's request ("... in Agartala ...").
+ * Returns null when no area is named, so the employee asks instead of guessing.
+ */
+const AREA_STOPWORDS = new Set(["with", "and", "that", "who", "which", "where", "having", "for", "from", "tell", "give", "only", "no", "all", "the", "overall", "our", "my", "please", "to", "of", "on", "show", "list"]);
+function researchArea(...texts: string[]): string | null {
+  for (const text of texts) {
+    const match = String(text ?? "").match(/\bin\s+([A-Za-z]{3,}(?:\s+[A-Za-z]{3,}){0,2})/i);
+    if (!match) continue;
+    const words: string[] = [];
+    for (const word of match[1].split(/\s+/)) {
+      if (AREA_STOPWORDS.has(word.toLowerCase())) break;
+      words.push(word);
+    }
+    if (words.length) return words.map((word) => word[0].toUpperCase() + word.slice(1).toLowerCase()).join(" ");
+  }
+  return null;
+}
+
+type WebSource = { title: string; uri: string };
+type MapPlace = { name: string; address: string; phone: string; rating: string; reviews: string; website: string; mapsUri: string };
+
+/** Google Search grounding through the native Gemini API. Returns the answer and the pages it used. */
+async function webSearch(query: string): Promise<{ text: string; sources: WebSource[]; tokens: number }> {
+  const apiKey = serverEnv("GEMINI_API_KEY");
+  const model = serverEnv("GEMINI_MODEL");
+  if (!apiKey || !model) throw new ModelError("Gemini is not configured on the server.", 503, null);
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: query }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: { maxOutputTokens: SEARCH_MAX_TOKENS, temperature: 0.2 },
+    }),
+  });
+  const result: any = await response.json().catch(() => ({}));
+  if (!response.ok) throw new ModelError(result?.error?.message || `Web search failed (${response.status}).`, response.status, null);
+  const candidate = result?.candidates?.[0];
+  const text = (candidate?.content?.parts ?? []).map((part: any) => part?.text ?? "").join("").trim();
+  const sources: WebSource[] = (candidate?.groundingMetadata?.groundingChunks ?? [])
+    .map((chunk: any) => ({ title: clean(chunk?.web?.title, 200), uri: clean(chunk?.web?.uri, 500) }))
+    .filter((item: WebSource) => item.uri);
+  return { text, sources, tokens: Number(result?.usageMetadata?.totalTokenCount) || 0 };
+}
+
+/**
+ * Free business records from OpenStreetMap (Overpass API). No key or billing.
+ * Data is community-maintained: a missing phone or website means "not recorded", not "does not exist".
+ * It has no ratings or review counts, so those must come from web pages that state them.
+ */
+async function mapsSearch(areaName: string): Promise<{ places: MapPlace[]; error: string | null }> {
+  const contact = serverEnv("RESEARCH_CONTACT_EMAIL");
+  const userAgent = `WorkManager-VirtualTeam/1.0${contact ? ` (${contact})` : ""}`;
+  const area = clean(areaName, 60).replace(/["\\]/g, "") || "Agartala";
+  const query = `[out:json][timeout:25];
+area["name"="${area}"]["boundary"="administrative"]->.a;
+(
+  nwr["shop"](area.a);
+  nwr["amenity"~"^(restaurant|cafe|fast_food|pharmacy|clinic|hospital|dentist|bar|bank)$"](area.a);
+  nwr["craft"](area.a);
+  nwr["office"](area.a);
+);
+out tags center 150;`;
+  try {
+    const response = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: { "User-Agent": userAgent, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ data: query }).toString(),
+      signal: AbortSignal.timeout(30000),
+    });
+    const result: any = await response.json().catch(() => ({}));
+    if (!response.ok) return { places: [], error: `OpenStreetMap lookup failed (${response.status}).` };
+    const places: MapPlace[] = (result?.elements ?? [])
+      .filter((item: any) => item?.tags?.name)
+      .map((item: any) => {
+        const tags = item.tags;
+        const kind = tags.shop || tags.amenity || tags.craft || tags.office || "business";
+        const address = [tags["addr:housenumber"], tags["addr:street"], tags["addr:suburb"], tags["addr:city"]]
+          .filter(Boolean)
+          .map((part: unknown) => clean(part, 80))
+          .join(", ");
+        return {
+          name: clean(tags.name, 200),
+          address: clean(`${kind}${address ? `, ${address}` : ""}`, 300),
+          phone: clean(tags.phone || tags["contact:phone"], 40),
+          rating: "",
+          reviews: "",
+          website: clean(tags.website || tags["contact:website"], 300),
+          mapsUri: `https://www.openstreetmap.org/${clean(item.type, 10)}/${Number(item.id) || 0}`,
+        };
+      });
+    return { places, error: null };
+  } catch (error) {
+    return { places: [], error: `OpenStreetMap lookup unavailable: ${error instanceof Error ? error.message : "unknown error"}` };
+  }
+}
+
+/** Builds the research material given to an employee. Only retrieved facts are included. */
+async function researchBlock(area: string | null, instruction: string): Promise<{ block: string; tokens: number }> {
+  if (!area) {
+    return {
+      block: "AREA NOT SPECIFIED: the Admin did not name a city or area for this search. Ask the Admin which area to search. Do not list any businesses.",
+      tokens: 0,
+    };
+  }
+  const lines: string[] = [];
+  let tokens = 0;
+  try {
+    const web = await webSearch(`${instruction}\nArea: ${area}\n\nUse Google Search. List only real businesses you found, each with the page it came from.`);
+    tokens += web.tokens;
+    lines.push(
+      "WEB SEARCH FINDINGS (leads to check, not verified facts):",
+      web.text || "No web results.",
+      "Pages used:",
+      web.sources.length ? web.sources.map((source) => `- ${source.title || "untitled"} ${source.uri}`).join("\n") : "- none returned",
+    );
+  } catch (error) {
+    lines.push(`WEB SEARCH unavailable: ${error instanceof Error ? error.message : "unknown error"}`);
+  }
+
+  const maps = await mapsSearch(area);
+  if (maps.error) lines.push(maps.error);
+  else if (!maps.places.length) lines.push("BUSINESS RECORDS: none returned for this area.");
+  else {
+    lines.push("BUSINESS RECORDS (OpenStreetMap, free community data; blank website or phone means not recorded. Ratings and review counts are not in this source):");
+    maps.places.forEach((place, index) => {
+      lines.push(
+        `${index + 1}. ${place.name} | ${place.address} | phone: ${place.phone || "not recorded"} | website: ${place.website || "not recorded"} | record: ${place.mapsUri}`,
+      );
+    });
+  }
+  lines.push("RULES: Quote only what appears above. Write 'not recorded' for any missing field. Give a rating or review count only if a web page above states it, and name that page. Never create a business, phone number, rating, review count or link that is not in these results.");
+  return { block: lines.join("\n"), tokens };
+}
+
+async function buildReport(admin: any, organizationId: string, members: MemberRow[], requestText: string): Promise<{ text: string; tokens: number }> {
+  const { data: missions } = await admin
+    .from("virtual_team_missions")
+    .select("id,title,request,status,created_at")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false })
+    .limit(3);
+  const list = missions ?? [];
+  if (!list.length) return { text: "There are no missions yet, so there is nothing to report.", tokens: 0 };
+
+  const { data: tasks } = await admin
+    .from("virtual_team_tasks")
+    .select("mission_id,position,member_id,status,output")
+    .in("mission_id", list.map((item: any) => item.id))
+    .order("position", { ascending: true });
+
+  const records = list
+    .map((item: any) => {
+      const rows = (tasks ?? []).filter((task: any) => task.mission_id === item.id);
+      const lines = rows
+        .map((task: any) => {
+          const name = members.find((member) => member.id === task.member_id)?.display_name ?? "Employee";
+          return `${name} (${task.status}):\n${clean(task.output || "(no output yet)", 1500)}`;
+        })
+        .join("\n\n");
+      return `Mission: ${item.title} [${item.status}]\nAdmin request: ${item.request}\n${lines}`;
+    })
+    .join("\n\n----\n\n");
+
+  const briefing = await callModel(
+    [
+      {
+        role: "system",
+        content: "You are Manager AI briefing the Admin. Using only the mission records below, write a briefing: what was delivered, key findings, disagreements and how they were settled, open questions, and missing information. Name who said what. Do not add facts that are not in the records. Plain text, under 300 words.",
+      },
+      { role: "user", content: `Admin asked: ${requestText}\n\n${records}` },
+    ],
+    { maxTokens: REPORT_MAX_TOKENS },
+  );
+  return { text: clean(briefing.text, 4000) || "I could not prepare the briefing. Please try again.", tokens: briefing.tokens };
+}
+
 export async function handleVirtualTeamMessage(request: Request): Promise<Response> {
   const user = await verifyRequestUser(request);
   if (!user || !user.organizationId) return json({ error: "Unauthorized" }, 401);
@@ -513,6 +699,20 @@ export async function handleVirtualTeamMessage(request: Request): Promise<Respon
     return json({ conversation_id: groupId, messages: [userMessage, ...replies] });
   }
 
+  // Admin asks for a report: Manager AI briefs from the stored mission records.
+  if (isAdmin && REPORT_REQUEST.test(text)) {
+    const briefing = await buildReport(admin, organizationId, members, text);
+    await addUsage(admin, organizationId, briefing.tokens);
+    const managerMessage = await postMessage(admin, {
+      organization_id: organizationId,
+      conversation_id: groupId,
+      sender_kind: "manager",
+      sender_member_id: manager?.id ?? null,
+      body: briefing.text,
+    });
+    return json({ conversation_id: groupId, messages: [userMessage, managerMessage] });
+  }
+
   // Otherwise Manager AI decides how to respond.
   const history = await loadHistory(admin, groupId, members, 12);
   const plan = await planWithManager(members, history, canCommand);
@@ -556,7 +756,7 @@ export async function handleVirtualTeamMessage(request: Request): Promise<Respon
       const names = assignments.map((item) => item.member!.display_name).join(", ");
       const statusLine =
         status === "queued"
-          ? `Mission started: ${mission.title}. Assigned to ${names}. Updates will appear here as each colleague finishes.`
+          ? `Mission started: ${mission.title}. Assigned to ${names}. Each will reply here when finished. Ask for a report whenever you want one.`
           : `Mission waiting for Admin approval: ${mission.title}. Proposed for ${names}.`;
       const managerMessage = await postMessage(admin, {
         organization_id: organizationId,
@@ -640,50 +840,11 @@ async function finishMissionIfDone(admin: any, missionId: string) {
 
   const { data: mission } = await admin.from("virtual_team_missions").select("*").eq("id", missionId).maybeSingle();
   if (!mission || mission.status !== "running") return;
-  await admin.from("virtual_team_missions").update({ status: "reviewing", updated_at: new Date().toISOString() }).eq("id", missionId);
 
-  const members = await loadMembers(admin, mission.organization_id);
-  const manager = members.find((member) => member.is_manager);
-  const { data: done } = await admin
-    .from("virtual_team_tasks")
-    .select("position, member_id, output")
-    .eq("mission_id", missionId)
-    .eq("status", "done")
-    .order("position", { ascending: true });
-  const completed = (done ?? [])
-    .map((row: any) => `${members.find((member) => member.id === row.member_id)?.display_name ?? "Employee"}:\n${row.output}`)
-    .join("\n\n");
-
-  let summary = "Mission completed. Deliverables are saved in the mission record.";
-  try {
-    const review = await callModel(
-      [
-        {
-          role: "system",
-          content: `You are Manager AI reporting to the Admin. Write a short management summary: what was delivered, the key findings, any disagreements raised and how they were settled, the open questions, and any missing information. Do not add facts that are not in the completed work.`,
-        },
-        { role: "user", content: `Mission: ${mission.title}\nAdmin request: ${mission.request}\n\nCompleted work:\n${completed || "(none)"}` },
-      ],
-      { maxTokens: REVIEW_MAX_TOKENS },
-    );
-    summary = clean(review.text, 4000) || summary;
-    await addUsage(admin, mission.organization_id, review.tokens);
-    await addMissionTokens(admin, mission as MissionRow, review.tokens);
-  } catch (error) {
-    console.warn("[virtual-team] review failed", error instanceof Error ? error.message : error);
-  }
-
-  await postMessage(admin, {
-    organization_id: mission.organization_id,
-    conversation_id: mission.conversation_id,
-    sender_kind: "manager",
-    sender_member_id: manager?.id ?? null,
-    body: summary,
-    mission_id: missionId,
-  });
+  // Nothing is posted to the chat here. The Admin requests reports explicitly.
   await admin
     .from("virtual_team_missions")
-    .update({ status: "completed", summary, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({ status: "completed", completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", missionId);
   await admin.from("virtual_team_audit_logs").insert({
     organization_id: mission.organization_id,
@@ -764,12 +925,20 @@ async function processTask(admin: any, task: TaskRow) {
       })
       .join("\n\n");
     const figures = member.member_key === "business-analyst" ? await financeBlock(admin, mission.organization_id) : "";
+    const research = RESEARCH_KEYS.has(member.member_key)
+      ? await researchBlock(researchArea(task.instruction, mission.request), task.instruction)
+      : null;
+    if (research?.tokens) {
+      await addMissionTokens(admin, mission as MissionRow, research.tokens);
+      await addUsage(admin, mission.organization_id, research.tokens);
+    }
 
     const userContent = [
       `Mission: ${mission.title}`,
       `Admin request: ${mission.request}`,
       colleagueWork ? `Colleagues' completed work:\n${colleagueWork}` : "No colleague has finished earlier work on this mission yet.",
       figures,
+      research?.block ?? "",
       `Your instruction: ${task.instruction}`,
       member.member_key === "prompt-engineer"
         ? "If you create prompts for reuse, end your reply with one ```json block containing an array of objects with keys niche, category, title, intended_use, variables (array), tags (array) and body. Use {{placeholders}} for variables. Keep each prompt specific, actionable and reusable."
