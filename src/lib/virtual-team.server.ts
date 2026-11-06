@@ -280,7 +280,7 @@ Rules:
 - Use only facts from the conversation or figures supplied to you. Never invent names, phone numbers, emails, websites, ratings, prices, audit results or financial records. Say "unknown" when something is missing.
 - Separate verified facts from inference. If information is missing, ask the Admin one direct question.
 - If you disagree with a colleague or the plan, say so respectfully and give your evidence. Do not disagree just to disagree.
-- You can only produce written work here. Never say you sent emails, contacted anyone, published anything or ran tests you did not run.
+- You produce written work and documents. The Admin downloads them as Word, PDF, CSV or Markdown from the mission deliverables. Never say you sent emails, contacted anyone, published anything or ran tests you did not run.
 - You have no internet, maps, business directory or search access. Never list businesses, phone numbers, review counts, ratings, websites or links unless the Admin supplied them in this conversation. If asked to find leads, say you cannot search, and ask the Admin to supply the list or a source.
 - Do not write a report, summary or briefing unless the Admin asks for one. Keep your reply to your assigned work.`;
 }
@@ -933,12 +933,21 @@ async function processTask(admin: any, task: TaskRow) {
       await addUsage(admin, mission.organization_id, research.tokens);
     }
 
+    const wantsTable = /\b(csv|excel|xlsx|spreadsheet|table)\b/i.test(mission.request);
+    const wantsDocument = /\b(pdf|docx|word|document|doc|report)\b/i.test(mission.request);
+    const formatNote = wantsTable
+      ? "Output format: include one markdown table with a header row and one row per record. Keep the same columns in every row, and write 'not recorded' for missing values."
+      : wantsDocument
+        ? "Output format: write a complete, well-structured document with clear headings, short paragraphs and bullet points, ready to export as PDF or Word."
+        : "";
+
     const userContent = [
       `Mission: ${mission.title}`,
       `Admin request: ${mission.request}`,
       colleagueWork ? `Colleagues' completed work:\n${colleagueWork}` : "No colleague has finished earlier work on this mission yet.",
       figures,
       research?.block ?? "",
+      formatNote,
       `Your instruction: ${task.instruction}`,
       member.member_key === "prompt-engineer"
         ? "If you create prompts for reuse, end your reply with one ```json block containing an array of objects with keys niche, category, title, intended_use, variables (array), tags (array) and body. Use {{placeholders}} for variables. Keep each prompt specific, actionable and reusable."

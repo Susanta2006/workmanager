@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePermissions } from "@/lib/permissions";
+import { EXPORT_LABELS, exportDeliverable, type ExportFormat } from "@/lib/virtual-team-export";
 import {
   ACTIVE_MISSION_STATUSES,
   bootstrapVirtualTeam,
@@ -341,13 +342,22 @@ function MissionDetail({ missionId }: { missionId: string }) {
           deliverables.map((item) => (
             <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-[12px]">
               <span className="min-w-0 truncate font-medium text-foreground">{item.title}</span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => downloadText(`${item.title.replace(/[^a-z0-9]+/gi, "-").slice(0, 60) || "deliverable"}.md`, item.content, "text/markdown;charset=utf-8")}
-              >
-                Download .md
-              </Button>
+              <div className="flex flex-wrap gap-1.5">
+                {(Object.keys(EXPORT_LABELS) as ExportFormat[]).map((format) => (
+                  <Button
+                    key={format}
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      exportDeliverable(item, format).catch((error) =>
+                        toast.error(error instanceof Error ? error.message : "The file could not be created."),
+                      )
+                    }
+                  >
+                    {EXPORT_LABELS[format]}
+                  </Button>
+                ))}
+              </div>
             </div>
           ))
         )}
