@@ -9,7 +9,6 @@ import {
   FolderKanban,
   IndianRupee,
   Minus,
-  Minus,
   Receipt,
   TrendingDown,
   TrendingUp,
