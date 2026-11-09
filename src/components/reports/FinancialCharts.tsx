@@ -62,10 +62,14 @@ export function MonthlyProfitChart({ data }: any) {
         <Line
           type="monotone"
           dataKey="profit"
-          name="Profit"
-          stroke="#10b981"
+          name="Profit / loss"
+          stroke="#64748b"
           strokeWidth={2}
-          dot={{ r: 2 }}
+          dot={(props: any) => {
+            const positive = props.payload?.profit > 0;
+            const negative = props.payload?.profit < 0;
+            return <circle cx={props.cx} cy={props.cy} r={3} fill={positive ? "#059669" : negative ? "#e11d48" : "#64748b"} stroke="white" strokeWidth={1} />;
+          }}
         />
       </ComposedChart>
     </ResponsiveContainer>
@@ -120,10 +124,14 @@ export function YearlyProfitChart({ data }: any) {
         <Line
           type="monotone"
           dataKey="profit"
-          name="Profit"
-          stroke="#10b981"
+          name="Profit / loss"
+          stroke="#64748b"
           strokeWidth={2}
-          dot={{ r: 3 }}
+          dot={(props: any) => {
+            const positive = props.payload?.profit > 0;
+            const negative = props.payload?.profit < 0;
+            return <circle cx={props.cx} cy={props.cy} r={3} fill={positive ? "#059669" : negative ? "#e11d48" : "#64748b"} stroke="white" strokeWidth={1} />;
+          }}
         />
       </ComposedChart>
     </ResponsiveContainer>
