@@ -8,7 +8,10 @@ import {
   Clock,
   FolderKanban,
   IndianRupee,
+  Minus,
+  Minus,
   Receipt,
+  TrendingDown,
   TrendingUp,
   Users,
   Wallet,
@@ -213,12 +216,12 @@ function DashboardPage() {
 
       <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:mt-3 sm:gap-3 xl:grid-cols-4">
         <StatCard
-          label="Net profit"
+          label={netProfit > 0 ? "Net profit" : netProfit < 0 ? "Net loss" : "Break-even"}
           to="/reports"
           value={inr(netProfit)}
-          hint="Collected minus expenses"
-          icon={TrendingUp}
-          tone={netProfit >= 0 ? "emerald" : "rose"}
+          hint={netProfit < 0 ? "Expenses exceed cash collected" : netProfit > 0 ? "Cash collected exceeds expenses" : "Cash collected equals expenses"}
+          icon={netProfit > 0 ? TrendingUp : netProfit < 0 ? TrendingDown : Minus}
+          tone={netProfit > 0 ? "emerald" : netProfit < 0 ? "rose" : "slate"}
         />
         <StatCard
           label="Outstanding"
@@ -257,8 +260,8 @@ function DashboardPage() {
                 Last 12 months · bars are money in and out, the line is profit
               </p>
             </div>
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
-              This month net {inr(metrics.thisMonth.profit)}
+            <span className={`rounded-full px-2 py-0.5 text-[11px] ${metrics.thisMonth.profit > 0 ? "bg-emerald-50 text-emerald-700" : metrics.thisMonth.profit < 0 ? "bg-rose-50 text-rose-700" : "bg-secondary text-muted-foreground"}`}>
+              {metrics.thisMonth.profit > 0 ? "This month profit" : metrics.thisMonth.profit < 0 ? "This month loss" : "This month break-even"} · {inr(metrics.thisMonth.profit)}
             </span>
           </div>
           <MonthlyProfitChart data={metrics.months} />
@@ -284,9 +287,9 @@ function DashboardPage() {
               </div>
             ))}
             <div className="flex items-center justify-between pt-1">
-              <dt className="font-semibold">Net</dt>
+              <dt className="font-semibold">{metrics.thisMonth.profit > 0 ? "Profit" : metrics.thisMonth.profit < 0 ? "Loss" : "Break-even"}</dt>
               <dd
-                className={`font-heading text-[14px] font-bold tabular-nums ${metrics.thisMonth.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                className={`font-heading text-[14px] font-bold tabular-nums ${metrics.thisMonth.profit > 0 ? "text-emerald-600" : metrics.thisMonth.profit < 0 ? "text-rose-600" : "text-muted-foreground"}`}
               >
                 {inr(metrics.thisMonth.profit)}
               </dd>

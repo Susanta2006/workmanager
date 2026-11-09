@@ -4,7 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CalendarRange,
   IndianRupee,
+  Minus,
+  Minus,
   Receipt,
+  TrendingDown,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -164,22 +167,22 @@ function FinancialReportsPage() {
     <div>
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
         <StatCard
-          label="Profit this month"
+          label={report.currentMonth.profit > 0 ? "Profit this month" : report.currentMonth.profit < 0 ? "Loss this month" : "Break-even this month"}
           value={inr(report.currentMonth.profit)}
           hint={`${report.currentMonth.label} · collected ${inr(report.currentMonth.collected)}`}
-          icon={TrendingUp}
-          tone="emerald"
+          icon={report.currentMonth.profit > 0 ? TrendingUp : report.currentMonth.profit < 0 ? TrendingDown : Minus}
+          tone={report.currentMonth.profit > 0 ? "emerald" : report.currentMonth.profit < 0 ? "rose" : "slate"}
         />
         <StatCard
-          label={`Profit ${report.thisYear.key}`}
+          label={`${report.thisYear.profit > 0 ? "Profit" : report.thisYear.profit < 0 ? "Loss" : "Break-even"} ${report.thisYear.key}`}
           value={inr(report.thisYear.profit)}
           hint={
             report.yearGrowth === null
               ? "First year of records"
               : `${report.yearGrowth >= 0 ? "+" : ""}${report.yearGrowth}% collected vs last year`
           }
-          icon={Wallet}
-          tone="blue"
+          icon={report.thisYear.profit > 0 ? TrendingUp : report.thisYear.profit < 0 ? TrendingDown : Minus}
+          tone={report.thisYear.profit > 0 ? "emerald" : report.thisYear.profit < 0 ? "rose" : "slate"}
         />
         <StatCard
           label="Expenses this month"
@@ -247,7 +250,7 @@ function FinancialReportsPage() {
                   Expenses
                 </TableHead>
                 <TableHead className="text-right text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Profit
+                  Profit / (Loss)
                 </TableHead>
                 <TableHead className="text-right text-[11px] uppercase tracking-wide text-muted-foreground">
                   Margin
@@ -354,7 +357,7 @@ function FinancialReportsPage() {
                     Expenses
                   </TableHead>
                   <TableHead className="text-right text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Profit
+                    Profit / (Loss)
                   </TableHead>
                   <TableHead className="text-right text-[11px] uppercase tracking-wide text-muted-foreground">
                     Growth
