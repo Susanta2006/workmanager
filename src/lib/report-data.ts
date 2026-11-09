@@ -108,4 +108,34 @@ export function openInvoices(documents: any[] = []) {
     .sort((a: any, b: any) => String(a.due_date || "9999").localeCompare(String(b.due_date || "9999")));
 }
 
+/** Shared presentation state so every financial overview uses the same sign rules. */
+export function profitState(value: any) {
+  const amount = num(value);
+  if (amount > 0) {
+    return {
+      kind: "profit" as const,
+      label: "Net profit",
+      shortLabel: "Profit",
+      hint: "Cash collected exceeds expenses",
+      tone: "emerald",
+    };
+  }
+  if (amount < 0) {
+    return {
+      kind: "loss" as const,
+      label: "Net loss",
+      shortLabel: "Loss",
+      hint: "Expenses exceed cash collected",
+      tone: "rose",
+    };
+  }
+  return {
+    kind: "break-even" as const,
+    label: "Break-even",
+    shortLabel: "Break-even",
+    hint: "Cash collected equals expenses",
+    tone: "slate",
+  };
+}
+
 export const sumBy = (rows: any[] = [], pick: any) => rows.reduce((sum, row) => sum + num(pick(row)), 0);
