@@ -9,8 +9,8 @@ import {
   FolderKanban,
   IndianRupee,
   Receipt,
-  TrendingDown,
   TrendingUp,
+  TrendingDown,
   Minus,
   Users,
   Wallet,
@@ -19,14 +19,13 @@ import { useOrgSettings } from "@/lib/org-settings";
 import DashboardHome from "@/components/dashboard/DashboardHome";
 import { usePermissions } from "@/lib/permissions";
 import {
-  accountingProfitOf,
   cashOf,
-  invoiceRevenue,
   liveInvoices,
   monthSeries,
   openInvoices,
   reportQueryOptions,
   sumBy,
+  profitState,
 } from "@/lib/report-data";
 import { daysUntil, fmtDate, inr, monthKey, num } from "@/lib/format";
 import { Briefcase } from "lucide-react";
@@ -107,7 +106,7 @@ function DashboardPage() {
       projectValue: projects
         .filter((project: any) => project.status !== "cancelled")
         .reduce((sum: number, project: any) => sum + num(project.project_value), 0),
-      invoiced: sumBy(invoices, (doc: any) => invoiceRevenue(doc)),
+      invoiced: sumBy(invoices, (doc: any) => doc.total),
       collected: cashOf(payments),
       expenses: sumBy(expenses, (expense: any) => expense.amount),
       outstanding,
@@ -170,10 +169,10 @@ function DashboardPage() {
     );
   }
 
-  const netProfit = accountingProfitOf(data || {});
-  const resultLabel = netProfit > 0 ? "Net profit" : netProfit < 0 ? "Net loss" : "Break-even";
-  const resultTone = netProfit > 0 ? "emerald" : netProfit < 0 ? "rose" : "slate";
-  const ResultIcon = netProfit > 0 ? TrendingUp : netProfit < 0 ? TrendingDown : Minus;
+  const netProfit = metrics.collected - metrics.expenses;
+  const overallProfitState = profitState(netProfit);
+  const monthProfitState = profitState(metrics.thisMonth.profit);
+  const ProfitIcon = overallProfitState.icon === "up" ? TrendingUp : overallProfitState.icon === "down" ? TrendingDown : Minus;
 
   return (
     <div>
@@ -196,7 +195,7 @@ function DashboardPage() {
           label="Invoiced"
           to="/documents"
           value={inr(metrics.invoiced)}
-          hint="Recognized invoice revenue, excluding tax"
+          hint="All invoices raised"
           icon={IndianRupee}
           tone="violet"
         />
@@ -220,12 +219,12 @@ function DashboardPage() {
 
       <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:mt-3 sm:gap-3 xl:grid-cols-4">
         <StatCard
-          label={resultLabel}
+          label={overallProfitState.label === "Break-even" ? "Break-even" : `Net ${overallProfitState.label.toLowerCase()}`}
           to="/reports"
           value={inr(netProfit)}
-          hint="Recognized invoice revenue minus refunds and recorded expenses"
-          icon={ResultIcon}
-          tone={resultTone}
+          hint={netProfit > 0 ? "Cash collected exceeds expenses" : netProfit < 0 ? "Expenses exceed cash collected" : "Cash collected equals expenses"}
+          icon={ProfitIcon}
+          tone={overallProfitState.tone}
         />
         <StatCard
           label="Outstanding"
@@ -261,11 +260,11 @@ function DashboardPage() {
                 Profit, collections and spending
               </h2>
               <p className="text-[11px] text-muted-foreground">
-                Last 12 months · accrual profit is invoiced revenue less refunds and expenses
+                Last 12 months · bars are money in and out, the line is monthly profit / loss
               </p>
             </div>
             <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
-              This month net {inr(metrics.thisMonth.profit)}
+              This month {monthProfitState.label.toLowerCase()} {inr(metrics.thisMonth.profit)}
             </span>
           </div>
           <MonthlyProfitChart data={metrics.months} />
@@ -291,9 +290,9 @@ function DashboardPage() {
               </div>
             ))}
             <div className="flex items-center justify-between pt-1">
-              <dt className="font-semibold">{metrics.thisMonth.profit > 0 ? "Net profit" : metrics.thisMonth.profit < 0 ? "Net loss" : "Break-even"}</dt>
+              <dt className="font-semibold">{monthProfitState.label === "Break-even" ? "Break-even" : `Net ${monthProfitState.label.toLowerCase()}`}</dt>
               <dd
-                className={`font-heading text-[14px] font-bold tabular-nums ${metrics.thisMonth.profit > 0 ? "text-emerald-600" : metrics.thisMonth.profit < 0 ? "text-rose-600" : "text-muted-foreground"}`}
+                className={`font-heading text-[14px] font-bold tabular-nums ${metrics.thisMonth.profit > 0 ? "text-emerald-600" : metrics.thisMonth.profit < 0 ? "text-rose-600" : "text-slate-600"}`}
               >
                 {inr(metrics.thisMonth.profit)}
               </dd>

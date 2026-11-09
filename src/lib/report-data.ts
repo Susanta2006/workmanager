@@ -1,7 +1,6 @@
 import { fetchAll } from "@/lib/db";
 import { num, monthKey, monthLabel } from "@/lib/format";
 import { fetchClients } from "@/lib/clients";
-import { computeTotals } from "@/lib/doc-types";
 
 /** Reports refresh themselves every 30 seconds, so the numbers stay current. */
 export const REPORT_REFETCH_MS = 30000;
@@ -25,7 +24,14 @@ export const reportQueryOptions = {
   staleTime: 0,
 };
 
-/** Net cash from a payment list (received minus refunded). This is cash flow, not profit. */
+/** Shared state for every profit/loss summary and indicator. */
+export function profitState(value: number) {
+  if (value > 0) return { label: "Profit", tone: "emerald", icon: "up" } as const;
+  if (value < 0) return { label: "Loss", tone: "rose", icon: "down" } as const;
+  return { label: "Break-even", tone: "slate", icon: "flat" } as const;
+}
+
+/** Net cash from a payment list (received minus refunded). */
 export function cashOf(payments: any[] = []) {
   return payments.reduce((sum, p) => {
     if (p.status === "received") return sum + num(p.amount);
@@ -34,52 +40,12 @@ export function cashOf(payments: any[] = []) {
   }, 0);
 }
 
-/**
- * Revenue recognized when an invoice is issued (accrual basis).
- * Tax collected on behalf of the government is excluded from revenue.
- * Legacy invoices without line items fall back to their stored subtotal, then total.
- */
-export function invoiceRevenue(doc: any) {
-  if (!doc || doc.doc_type !== "invoice" || ["draft", "cancelled"].includes(doc.status)) return 0;
-  if (Array.isArray(doc.items) && doc.items.length) {
-    return num(computeTotals(doc.items, 0).subtotal);
-  }
-  return num(doc.subtotal ?? doc.total);
-}
-
 export const liveInvoices = (documents: any[] = []) =>
-  documents.filter((d) => d.doc_type === "invoice" && !["draft", "cancelled"].includes(d.status));
-
-/**
- * Refunds reduce recognized revenue on the refund date. For an invoice-linked refund,
- * only the pre-tax revenue portion is reversed; the tax portion is not treated as revenue.
- * Unlinked refunds are deducted in full because there is no invoice tax split to apply.
- */
-export function refundsOf(payments: any[] = [], documents: any[] = []) {
-  const docsById = new Map((documents || []).map((doc) => [doc.id, doc]));
-  return payments.reduce((sum, payment) => {
-    if (payment.status !== "refunded") return sum;
-    const amount = num(payment.amount);
-    const linkedInvoice = docsById.get(payment.document_id);
-    if (!linkedInvoice || linkedInvoice.doc_type !== "invoice") return sum + amount;
-    const gross = num(linkedInvoice.total);
-    const netRevenue = invoiceRevenue(linkedInvoice);
-    const revenueRatio = gross > 0 ? Math.min(1, Math.max(0, netRevenue / gross)) : 1;
-    return sum + amount * revenueRatio;
-  }, 0);
-}
-
-/** Accrual-basis result: issued invoice revenue less refunds and recorded expenses. */
-export function accountingProfitOf({ documents = [], payments = [], expenses = [] }: { documents?: any[]; payments?: any[]; expenses?: any[] } = {}) {
-  const revenue = liveInvoices(documents).reduce((sum, doc) => sum + invoiceRevenue(doc), 0);
-  const refunds = refundsOf(payments, documents);
-  const spent = expenses.reduce((sum, expense) => sum + num(expense.amount), 0);
-  return revenue - refunds - spent;
-}
+  documents.filter((d) => d.doc_type === "invoice" && d.status !== "cancelled");
 
 export const expenseStatus = (expense: any) => expense?.status || "paid";
 
-/** Last `count` months, oldest first. Profit is recognized invoice revenue less refunds and expenses. */
+/** Last `count` months, oldest first, with invoiced / collected / expenses / profit. */
 export function monthSeries({ documents = [], payments = [], expenses = [] }: { documents?: any[]; payments?: any[]; expenses?: any[] } = {}, count = 12) {
   const invoices = liveInvoices(documents);
   const months: any[] = [];
@@ -90,9 +56,8 @@ export function monthSeries({ documents = [], payments = [], expenses = [] }: { 
     const key = monthKey(d);
     const invoiced = invoices
       .filter((doc) => monthKey(doc.issue_date) === key)
-      .reduce((sum, doc) => sum + invoiceRevenue(doc), 0);
+      .reduce((sum, doc) => sum + num(doc.total), 0);
     const collected = cashOf(payments.filter((p) => monthKey(p.payment_date) === key));
-    const refunds = refundsOf(payments.filter((p) => monthKey(p.payment_date) === key), documents);
     const spent = expenses
       .filter((expense) => monthKey(expense.expense_date) === key)
       .reduce((sum, expense) => sum + num(expense.amount), 0);
@@ -101,50 +66,66 @@ export function monthSeries({ documents = [], payments = [], expenses = [] }: { 
       label: monthLabel(key),
       invoiced,
       collected,
-      refunds,
       expenses: spent,
-      profit: invoiced - refunds - spent,
+      profit: collected - spent,
     });
   }
   return months;
 }
 
-/** Every year that has activity, oldest first. */
+/** Every year that has activity, oldest first. Annual profit is the sum of that year's monthly cash profit/loss values. */
 export function yearSeries({ documents = [], payments = [], expenses = [] }: { documents?: any[]; payments?: any[]; expenses?: any[] } = {}) {
   const invoices = liveInvoices(documents);
-  const map = new Map();
+  const years = new Map();
+  const monthly = new Map();
 
-  const bucket = (value: any) => {
+  const yearBucket = (value: any) => {
     const year = String(value || "").slice(0, 4);
     if (!/^\d{4}$/.test(year)) return null;
-    if (!map.has(year)) {
-      map.set(year, { key: year, label: year, invoiced: 0, collected: 0, refunds: 0, expenses: 0, profit: 0 });
+    if (!years.has(year)) {
+      years.set(year, { key: year, label: year, invoiced: 0, collected: 0, expenses: 0, profit: 0 });
     }
-    return map.get(year);
+    return years.get(year);
+  };
+
+  const monthBucket = (value: any) => {
+    const key = monthKey(value);
+    if (!/^\d{4}-\d{2}$/.test(key)) return null;
+    if (!monthly.has(key)) monthly.set(key, { collected: 0, expenses: 0 });
+    return monthly.get(key);
   };
 
   invoices.forEach((doc) => {
-    const row = bucket(doc.issue_date);
-    if (row) row.invoiced += invoiceRevenue(doc);
+    const row = yearBucket(doc.issue_date);
+    if (row) row.invoiced += num(doc.total);
   });
   payments.forEach((payment) => {
-    const row = bucket(payment.payment_date);
-    if (!row) return;
-    if (payment.status === "received") row.collected += num(payment.amount);
-    else if (payment.status === "refunded") {
+    const row = yearBucket(payment.payment_date);
+    const month = monthBucket(payment.payment_date);
+    if (!row || !month) return;
+    if (payment.status === "received") {
+      row.collected += num(payment.amount);
+      month.collected += num(payment.amount);
+    } else if (payment.status === "refunded") {
       row.collected -= num(payment.amount);
-      row.refunds += refundsOf([payment], documents);
+      month.collected -= num(payment.amount);
     }
   });
   expenses.forEach((expense) => {
-    const row = bucket(expense.expense_date);
-    if (row) row.expenses += num(expense.amount);
-  });
-  map.forEach((row) => {
-    row.profit = row.invoiced - row.refunds - row.expenses;
+    const row = yearBucket(expense.expense_date);
+    const month = monthBucket(expense.expense_date);
+    if (!row || !month) return;
+    row.expenses += num(expense.amount);
+    month.expenses += num(expense.amount);
   });
 
-  return [...map.values()].sort((a: any, b: any) => a.key.localeCompare(b.key));
+  // Annual net result = the sum of each month's collected-minus-expenses result.
+  monthly.forEach((month, key) => {
+    const row = years.get(key.slice(0, 4));
+    if (row) row.profit += month.collected - month.expenses;
+  });
+
+  return [...years.values()].sort((a: any, b: any) => a.key.localeCompare(b.key));
 }
 
 /** Open invoices with money still owed, soonest due first. */

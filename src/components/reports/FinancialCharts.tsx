@@ -22,10 +22,16 @@ const compact = (value: any) =>
   Math.abs(value) >= 1000 ? `${Math.round(value / 1000)}k` : value;
 
 export function MonthlyProfitChart({ data }: any) {
+  const chartData = (data || []).map((row: any) => ({
+    ...row,
+    profitPositive: row.profit > 0 ? row.profit : null,
+    profitNegative: row.profit < 0 ? row.profit : null,
+    profitZero: row.profit === 0 ? 0 : null,
+  }));
   return (
     <ResponsiveContainer width="100%" height={280}>
       <ComposedChart
-        data={data}
+        data={chartData}
         margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
       >
         <CartesianGrid
@@ -59,24 +65,25 @@ export function MonthlyProfitChart({ data }: any) {
           radius={[4, 4, 0, 0]}
           barSize={16}
         />
-        <Line
-          type="monotone"
-          dataKey="profit"
-          name="Net profit / (loss)"
-          stroke="#64748b"
-          strokeWidth={2}
-          dot={{ r: 2 }}
-        />
+        <Line type="monotone" dataKey="profitPositive" name="Profit" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: "#10b981" }} connectNulls={false} />
+        <Line type="monotone" dataKey="profitNegative" name="Loss" stroke="#e11d48" strokeWidth={2} dot={{ r: 3, fill: "#e11d48" }} connectNulls={false} />
+        <Line type="monotone" dataKey="profitZero" name="Break-even" stroke="#64748b" strokeWidth={2} dot={{ r: 3, fill: "#64748b" }} connectNulls={false} />
       </ComposedChart>
     </ResponsiveContainer>
   );
 }
 
 export function YearlyProfitChart({ data }: any) {
+  const chartData = (data || []).map((row: any) => ({
+    ...row,
+    profitPositive: row.profit > 0 ? row.profit : null,
+    profitNegative: row.profit < 0 ? row.profit : null,
+    profitZero: row.profit === 0 ? 0 : null,
+  }));
   return (
     <ResponsiveContainer width="100%" height={260}>
       <ComposedChart
-        data={data}
+        data={chartData}
         margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
       >
         <CartesianGrid
@@ -117,14 +124,9 @@ export function YearlyProfitChart({ data }: any) {
           radius={[4, 4, 0, 0]}
           barSize={18}
         />
-        <Line
-          type="monotone"
-          dataKey="profit"
-          name="Net profit / (loss)"
-          stroke="#64748b"
-          strokeWidth={2}
-          dot={{ r: 3 }}
-        />
+        <Line type="monotone" dataKey="profitPositive" name="Profit" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: "#10b981" }} connectNulls={false} />
+        <Line type="monotone" dataKey="profitNegative" name="Loss" stroke="#e11d48" strokeWidth={2} dot={{ r: 3, fill: "#e11d48" }} connectNulls={false} />
+        <Line type="monotone" dataKey="profitZero" name="Break-even" stroke="#64748b" strokeWidth={2} dot={{ r: 3, fill: "#64748b" }} connectNulls={false} />
       </ComposedChart>
     </ResponsiveContainer>
   );
