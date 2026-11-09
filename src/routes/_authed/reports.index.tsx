@@ -25,6 +25,7 @@ import {
   yearSeries,
   openInvoices,
   sumBy,
+  profitState,
 } from "@/lib/report-data";
 import {
   downloadCsv,
@@ -134,6 +135,9 @@ function FinancialReportsPage() {
 
   if (isLoading) return <Skeleton className="h-[520px] rounded-xl" />;
 
+  const currentMonthResult = profitState(report.currentMonth.profit);
+  const currentYearResult = profitState(report.thisYear.profit);
+
   const exportMonthly = () => {
     downloadCsv(
       `monthly-profit-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -166,14 +170,14 @@ function FinancialReportsPage() {
     <div>
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
         <StatCard
-          label={report.currentMonth.profit > 0 ? "Profit this month" : report.currentMonth.profit < 0 ? "Loss this month" : "Break-even this month"}
+          label={`${currentMonthResult.shortLabel} this month`}
           value={inr(report.currentMonth.profit)}
           hint={`${report.currentMonth.label} · collected ${inr(report.currentMonth.collected)}`}
           icon={report.currentMonth.profit > 0 ? TrendingUp : report.currentMonth.profit < 0 ? TrendingDown : Minus}
-          tone={report.currentMonth.profit > 0 ? "emerald" : report.currentMonth.profit < 0 ? "rose" : "slate"}
+          tone={currentMonthResult.tone}
         />
         <StatCard
-          label={`${report.thisYear.profit > 0 ? "Profit" : report.thisYear.profit < 0 ? "Loss" : "Break-even"} ${report.thisYear.key}`}
+          label={`${currentYearResult.shortLabel} ${report.thisYear.key}`}
           value={inr(report.thisYear.profit)}
           hint={
             report.yearGrowth === null
@@ -181,7 +185,7 @@ function FinancialReportsPage() {
               : `${report.yearGrowth >= 0 ? "+" : ""}${report.yearGrowth}% collected vs last year`
           }
           icon={report.thisYear.profit > 0 ? TrendingUp : report.thisYear.profit < 0 ? TrendingDown : Minus}
-          tone={report.thisYear.profit > 0 ? "emerald" : report.thisYear.profit < 0 ? "rose" : "slate"}
+          tone={currentYearResult.tone}
         />
         <StatCard
           label="Expenses this month"
@@ -284,7 +288,7 @@ function FinancialReportsPage() {
                     {inr(month.expenses)}
                   </TableCell>
                   <TableCell
-                    className={`text-right text-[12.5px] font-semibold tabular-nums ${month.profit >= 0 ? "text-emerald-700" : "text-rose-600"}`}
+                    className={`text-right text-[12.5px] font-semibold tabular-nums ${month.profit > 0 ? "text-emerald-700" : month.profit < 0 ? "text-rose-600" : "text-muted-foreground"}`}
                   >
                     {inr(month.profit)}
                   </TableCell>
@@ -307,7 +311,7 @@ function FinancialReportsPage() {
                   {inr(report.totals.expenses)}
                 </TableCell>
                 <TableCell
-                  className={`text-right text-[12.5px] font-bold tabular-nums ${report.totals.profit >= 0 ? "text-emerald-700" : "text-rose-600"}`}
+                  className={`text-right text-[12.5px] font-bold tabular-nums ${report.totals.profit > 0 ? "text-emerald-700" : report.totals.profit < 0 ? "text-rose-600" : "text-muted-foreground"}`}
                 >
                   {inr(report.totals.profit)}
                 </TableCell>
@@ -394,7 +398,7 @@ function FinancialReportsPage() {
                         {inr(year.expenses)}
                       </TableCell>
                       <TableCell
-                        className={`text-right text-[12.5px] font-semibold tabular-nums ${year.profit >= 0 ? "text-emerald-700" : "text-rose-600"}`}
+                        className={`text-right text-[12.5px] font-semibold tabular-nums ${year.profit > 0 ? "text-emerald-700" : year.profit < 0 ? "text-rose-600" : "text-muted-foreground"}`}
                       >
                         {inr(year.profit)}
                       </TableCell>
