@@ -22,6 +22,8 @@ const compact = (value: any) =>
   Math.abs(value) >= 1000 ? `${Math.round(value / 1000)}k` : value;
 
 export function MonthlyProfitChart({ data }: any) {
+  const latestProfit = data?.[data.length - 1]?.profit ?? 0;
+  const profitStroke = latestProfit > 0 ? "#059669" : latestProfit < 0 ? "#e11d48" : "#64748b";
   return (
     <ResponsiveContainer width="100%" height={280}>
       <ComposedChart
@@ -63,7 +65,7 @@ export function MonthlyProfitChart({ data }: any) {
           type="monotone"
           dataKey="profit"
           name="Profit / loss"
-          stroke="#64748b"
+          stroke={profitStroke}
           strokeWidth={2}
           dot={(props: any) => {
             const positive = props.payload?.profit > 0;
@@ -77,6 +79,8 @@ export function MonthlyProfitChart({ data }: any) {
 }
 
 export function YearlyProfitChart({ data }: any) {
+  const latestProfit = data?.[data.length - 1]?.profit ?? 0;
+  const profitStroke = latestProfit > 0 ? "#059669" : latestProfit < 0 ? "#e11d48" : "#64748b";
   return (
     <ResponsiveContainer width="100%" height={260}>
       <ComposedChart
@@ -125,7 +129,7 @@ export function YearlyProfitChart({ data }: any) {
           type="monotone"
           dataKey="profit"
           name="Profit / loss"
-          stroke="#64748b"
+          stroke={profitStroke}
           strokeWidth={2}
           dot={(props: any) => {
             const positive = props.payload?.profit > 0;
@@ -139,6 +143,8 @@ export function YearlyProfitChart({ data }: any) {
 }
 
 export function ExpenseTrendChart({ data }: any) {
+  const latestProfit = data?.[data.length - 1]?.profit ?? 0;
+  const profitStroke = latestProfit > 0 ? "#10b981" : latestProfit < 0 ? "#e11d48" : "#64748b";
   return (
     <ResponsiveContainer width="100%" height={250}>
       <ComposedChart
@@ -173,7 +179,7 @@ export function ExpenseTrendChart({ data }: any) {
           type="monotone"
           dataKey="profit"
           name="Net after spend"
-          stroke="#10b981"
+          stroke={profitStroke}
           strokeWidth={2}
           dot={false}
         />
