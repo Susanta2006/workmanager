@@ -8,10 +8,10 @@ import {
   Clock,
   FolderKanban,
   IndianRupee,
-  Minus,
   Receipt,
   TrendingDown,
   TrendingUp,
+  Minus,
   Users,
   Wallet,
 } from "lucide-react";
@@ -19,13 +19,14 @@ import { useOrgSettings } from "@/lib/org-settings";
 import DashboardHome from "@/components/dashboard/DashboardHome";
 import { usePermissions } from "@/lib/permissions";
 import {
+  accountingProfitOf,
   cashOf,
+  invoiceRevenue,
   liveInvoices,
   monthSeries,
   openInvoices,
   reportQueryOptions,
   sumBy,
-  profitState,
 } from "@/lib/report-data";
 import { daysUntil, fmtDate, inr, monthKey, num } from "@/lib/format";
 import { Briefcase } from "lucide-react";
@@ -106,7 +107,7 @@ function DashboardPage() {
       projectValue: projects
         .filter((project: any) => project.status !== "cancelled")
         .reduce((sum: number, project: any) => sum + num(project.project_value), 0),
-      invoiced: sumBy(invoices, (doc: any) => doc.total),
+      invoiced: sumBy(invoices, (doc: any) => invoiceRevenue(doc)),
       collected: cashOf(payments),
       expenses: sumBy(expenses, (expense: any) => expense.amount),
       outstanding,
@@ -169,9 +170,10 @@ function DashboardPage() {
     );
   }
 
-  const netProfit = metrics.collected - metrics.expenses;
-  const netResult = profitState(netProfit);
-  const monthlyResult = profitState(metrics.thisMonth.profit);
+  const netProfit = accountingProfitOf(data || {});
+  const resultLabel = netProfit > 0 ? "Net profit" : netProfit < 0 ? "Net loss" : "Break-even";
+  const resultTone = netProfit > 0 ? "emerald" : netProfit < 0 ? "rose" : "slate";
+  const ResultIcon = netProfit > 0 ? TrendingUp : netProfit < 0 ? TrendingDown : Minus;
 
   return (
     <div>
@@ -194,7 +196,7 @@ function DashboardPage() {
           label="Invoiced"
           to="/documents"
           value={inr(metrics.invoiced)}
-          hint="All invoices raised"
+          hint="Recognized invoice revenue, excluding tax"
           icon={IndianRupee}
           tone="violet"
         />
@@ -218,12 +220,12 @@ function DashboardPage() {
 
       <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:mt-3 sm:gap-3 xl:grid-cols-4">
         <StatCard
-          label={netResult.label}
+          label={resultLabel}
           to="/reports"
           value={inr(netProfit)}
-          hint={netResult.hint}
-          icon={netProfit > 0 ? TrendingUp : netProfit < 0 ? TrendingDown : Minus}
-          tone={netResult.tone}
+          hint="Recognized invoice revenue minus refunds and recorded expenses"
+          icon={ResultIcon}
+          tone={resultTone}
         />
         <StatCard
           label="Outstanding"
@@ -259,11 +261,11 @@ function DashboardPage() {
                 Profit, collections and spending
               </h2>
               <p className="text-[11px] text-muted-foreground">
-                Last 12 months · bars are money in and out, the line is profit
+                Last 12 months · accrual profit is invoiced revenue less refunds and expenses
               </p>
             </div>
-            <span className={`rounded-full px-2 py-0.5 text-[11px] ${monthlyResult.tone === "emerald" ? "bg-emerald-50 text-emerald-700" : monthlyResult.tone === "rose" ? "bg-rose-50 text-rose-700" : "bg-secondary text-muted-foreground"}`}>
-              This month {monthlyResult.shortLabel.toLowerCase()} · {inr(metrics.thisMonth.profit)}
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
+              This month net {inr(metrics.thisMonth.profit)}
             </span>
           </div>
           <MonthlyProfitChart data={metrics.months} />
@@ -289,9 +291,9 @@ function DashboardPage() {
               </div>
             ))}
             <div className="flex items-center justify-between pt-1">
-              <dt className="font-semibold">{monthlyResult.shortLabel}</dt>
+              <dt className="font-semibold">{metrics.thisMonth.profit > 0 ? "Net profit" : metrics.thisMonth.profit < 0 ? "Net loss" : "Break-even"}</dt>
               <dd
-                className={`font-heading text-[14px] font-bold tabular-nums ${monthlyResult.tone === "emerald" ? "text-emerald-600" : monthlyResult.tone === "rose" ? "text-rose-600" : "text-muted-foreground"}`}
+                className={`font-heading text-[14px] font-bold tabular-nums ${metrics.thisMonth.profit > 0 ? "text-emerald-600" : metrics.thisMonth.profit < 0 ? "text-rose-600" : "text-muted-foreground"}`}
               >
                 {inr(metrics.thisMonth.profit)}
               </dd>

@@ -22,8 +22,6 @@ const compact = (value: any) =>
   Math.abs(value) >= 1000 ? `${Math.round(value / 1000)}k` : value;
 
 export function MonthlyProfitChart({ data }: any) {
-  const latestProfit = data?.[data.length - 1]?.profit ?? 0;
-  const profitStroke = latestProfit > 0 ? "#059669" : latestProfit < 0 ? "#e11d48" : "#64748b";
   return (
     <ResponsiveContainer width="100%" height={280}>
       <ComposedChart
@@ -64,14 +62,10 @@ export function MonthlyProfitChart({ data }: any) {
         <Line
           type="monotone"
           dataKey="profit"
-          name="Profit / loss"
-          stroke={profitStroke}
+          name="Net profit / (loss)"
+          stroke="#64748b"
           strokeWidth={2}
-          dot={(props: any) => {
-            const positive = props.payload?.profit > 0;
-            const negative = props.payload?.profit < 0;
-            return <circle cx={props.cx} cy={props.cy} r={3} fill={positive ? "#059669" : negative ? "#e11d48" : "#64748b"} stroke="white" strokeWidth={1} />;
-          }}
+          dot={{ r: 2 }}
         />
       </ComposedChart>
     </ResponsiveContainer>
@@ -79,8 +73,6 @@ export function MonthlyProfitChart({ data }: any) {
 }
 
 export function YearlyProfitChart({ data }: any) {
-  const latestProfit = data?.[data.length - 1]?.profit ?? 0;
-  const profitStroke = latestProfit > 0 ? "#059669" : latestProfit < 0 ? "#e11d48" : "#64748b";
   return (
     <ResponsiveContainer width="100%" height={260}>
       <ComposedChart
@@ -128,14 +120,10 @@ export function YearlyProfitChart({ data }: any) {
         <Line
           type="monotone"
           dataKey="profit"
-          name="Profit / loss"
-          stroke={profitStroke}
+          name="Net profit / (loss)"
+          stroke="#64748b"
           strokeWidth={2}
-          dot={(props: any) => {
-            const positive = props.payload?.profit > 0;
-            const negative = props.payload?.profit < 0;
-            return <circle cx={props.cx} cy={props.cy} r={3} fill={positive ? "#059669" : negative ? "#e11d48" : "#64748b"} stroke="white" strokeWidth={1} />;
-          }}
+          dot={{ r: 3 }}
         />
       </ComposedChart>
     </ResponsiveContainer>
@@ -143,8 +131,6 @@ export function YearlyProfitChart({ data }: any) {
 }
 
 export function ExpenseTrendChart({ data }: any) {
-  const latestProfit = data?.[data.length - 1]?.profit ?? 0;
-  const profitStroke = latestProfit > 0 ? "#10b981" : latestProfit < 0 ? "#e11d48" : "#64748b";
   return (
     <ResponsiveContainer width="100%" height={250}>
       <ComposedChart
@@ -179,7 +165,7 @@ export function ExpenseTrendChart({ data }: any) {
           type="monotone"
           dataKey="profit"
           name="Net after spend"
-          stroke={profitStroke}
+          stroke="#10b981"
           strokeWidth={2}
           dot={false}
         />
